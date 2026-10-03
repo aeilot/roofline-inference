@@ -1,0 +1,64 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Environments ---
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Data & results (keep dir structure, not contents) ---
+data/*
+!data/.gitkeep
+results/raw/*
+!results/raw/.gitkeep
+
+# --- Model weights / large artifacts ---
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+*.gguf
+checkpoints/
+
+# --- Profiler output ---
+*.nsys-rep
+*.ncu-rep
+*.qdrep
+*.sqlite
+*.trace.json
+*.pftrace
+*.prof
+nvidia-nsight*/
+
+# --- Logs ---
+*.log
+logs/
+wandb/
+mlruns/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# --- Claude Code (local settings only) ---
+.claude/settings.local.json
