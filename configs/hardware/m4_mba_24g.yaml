@@ -1,0 +1,56 @@
+# MacBook Air M4 (Mac16,13), 24 GB unified memory.
+#
+# Every quantity has:
+#   value       datasheet or estimate, used until a measurement exists
+#   source      datasheet | estimate | system   (where `value` came from)
+#   confidence  high | medium | low
+#   measured    filled in by benchmarks/; overrides `value` when not null
+#
+# Units: FLOP/s, bytes/s, bytes, seconds.
+
+name: m4_mba_24g
+description: MacBook Air M4 (Mac16,13), 4P+6E CPU, 10-core GPU, 24 GB LPDDR5X
+
+memory:
+  total_bandwidth:
+    value: 120.0e9
+    source: datasheet
+    confidence: medium
+    measured: null
+    note: LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE
+  capacity:
+    value: 25769803776
+    source: system
+    confidence: high
+    measured: null
+    note: hw.memsize, 24 GiB
+
+engines:
+  gpu:
+    cores: 10
+    compute:
+      bf16:
+        value: 4.0e12
+        source: estimate
+        confidence: low
+        measured: null
+        note: >-
+          10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4;
+          BF16 is assumed to run at the FP32 rate.
+      fp32:
+        value: 4.0e12
+        source: estimate
+        confidence: low
+        measured: null
+    bandwidth:
+      value: 120.0e9
+      source: estimate
+      confidence: low
+      measured: null
+      note: GPU-alone achievable bandwidth; upper-bounded by total_bandwidth
+    usable_memory:
+      value: 19069665280
+      source: system
+      confidence: high
+      measured: null
+      note: MLX max_recommended_working_set_size (~17.76 GiB, default iogpu.wired_limit_mb)

@@ -1,0 +1,14 @@
+# Qwen3-0.6B, from https://huggingface.co/Qwen/Qwen3-0.6B/blob/main/config.json
+
+name: qwen3_0.6b
+num_layers: 28
+hidden_size: 1024
+intermediate_size: 3072      # SwiGLU: gate, up, down
+num_heads: 16
+num_kv_heads: 8
+head_dim: 128
+vocab_size: 151936
+tie_word_embeddings: true
+qk_norm: true                # per-head RMSNorm on Q and K
+weight_dtype: bf16
+kv_dtype: bf16
