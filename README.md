@@ -7,9 +7,10 @@ Given the model architecture and everything known about the hardware, this
 project estimates the best performance any implementation could achieve
 (decode tokens/s, prefill TTFT, throughput) and reports which resource
 bounds it. Existing kernels give the lower bound ("what we can do today");
-the gap between the two is the room for optimization. The end goal is to let
-an agent search for inference-engine designs under looser constraints than
-existing operators, and score them by `achieved / bound`.
+the gap between the two is the room for optimization. The end goal is a
+navigator for an agent that customizes an inference engine: the bound and a
+per-plan cost model show where the gap comes from and how much relaxing each
+constraint would gain.
 
 This is not a tool for placing existing kernels on a roofline plot.
 Measurements are only used to calibrate device parameters and the lower
