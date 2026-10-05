@@ -14,6 +14,23 @@ from roofline.model import ModelSpec
 
 
 @dataclass(frozen=True)
+class Gemm:
+    """C[m x n] = A[m x k] @ W[k x n], repeated `count` times per step.
+
+    A is the activation operand, W the weight. Shapes are what the I/O bound
+    in pebble.py needs; the physical bound only uses the totals above.
+    """
+
+    name: str
+    m: int
+    n: int
+    k: int
+    count: int
+    elem_bytes: int  # A, W and C share the weight dtype
+    persistent_out_bytes: int = 0  # output that must reach DRAM (new K/V)
+
+
+@dataclass(frozen=True)
 class Workload:
     phase: str  # "decode" | "prefill"
     batch: int
@@ -21,6 +38,7 @@ class Workload:
     flops: dict[str, float]
     bytes: dict[str, float]  # DRAM traffic
     memory: dict[str, float]  # resident footprint
+    gemms: tuple[Gemm, ...] = ()
 
     @property
     def total_flops(self) -> float:
@@ -51,6 +69,22 @@ def _weights_read_bytes(m: ModelSpec) -> int:
     return (layers + final_norm + head) * m.weight_bytes_per_param
 
 
+def _gemms(m: ModelSpec, rows: int, head_rows: int) -> tuple[Gemm, ...]:
+    """Matmuls of one forward pass over `rows` tokens; the LM head sees
+    `head_rows`. Projections that share an input are one GEMM (QKV, gate+up);
+    SwiGLU runs in the gate+up epilogue, so down reads `intermediate_size`
+    columns."""
+    d, L, e = m.hidden_size, m.num_layers, m.weight_bytes_per_param
+    new_kv = rows * 2 * m.kv_dim * m.kv_bytes_per_elem
+    return (
+        Gemm("qkv", rows, m.q_dim + 2 * m.kv_dim, d, L, e, persistent_out_bytes=new_kv),
+        Gemm("o_proj", rows, d, m.q_dim, L, e),
+        Gemm("gate_up", rows, 2 * m.intermediate_size, d, L, e),
+        Gemm("down", rows, d, m.intermediate_size, L, e),
+        Gemm("lm_head", head_rows, m.vocab_size, d, 1, e),
+    )
+
+
 def decode(m: ModelSpec, batch: int, context: int) -> Workload:
     """One decode step: each of `batch` sequences has `context` cached tokens
     and generates one new token, which attends over context + 1 positions."""
@@ -72,7 +106,7 @@ def decode(m: ModelSpec, batch: int, context: int) -> Workload:
         "weights": m.weight_bytes,
         "kv_cache": batch * attended * m.kv_bytes_per_token,
     }
-    return Workload("decode", batch, batch, flops, traffic, memory)
+    return Workload("decode", batch, batch, flops, traffic, memory, _gemms(m, batch, batch))
 
 
 def prefill(m: ModelSpec, batch: int, prompt_len: int) -> Workload:
@@ -98,4 +132,4 @@ def prefill(m: ModelSpec, batch: int, prompt_len: int) -> Workload:
         "weights": m.weight_bytes,
         "kv_cache": batch * p * m.kv_bytes_per_token,
     }
-    return Workload("prefill", batch, batch * p, flops, traffic, memory)
+    return Workload("prefill", batch, batch * p, flops, traffic, memory, _gemms(m, batch * p, batch))

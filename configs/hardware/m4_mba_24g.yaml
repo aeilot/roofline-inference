@@ -16,14 +16,32 @@ memory:
     value: 120.0e9
     source: datasheet
     confidence: medium
-    measured: null
-    note: LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE
+    measured: 102.7e9
+    note: >-
+      LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE. Measured 2026-10-04
+      with benchmarks/contention.py (3 s read windows, best of 3): GPU alone
+      95.0, CPU alone 46-54, CPU + GPU 89.6-92.0 GB/s. Running both never beats
+      the GPU alone, so the GPU alone reaches the DRAM ceiling; `measured` is
+      set to the GPU-alone read bandwidth from benchmarks/bandwidth.py.
   capacity:
     value: 25769803776
     source: system
     confidence: high
     measured: null
     note: hw.memsize, 24 GiB
+  on_chip:
+    value: 8388608
+    source: estimate
+    confidence: low
+    measured: 12582912
+    note: >-
+      Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2
+      plus system level cache), the M of the red-blue pebble bound. Unpublished;
+      the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with
+      benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up
+      to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB.
+      `measured` takes the upper edge, rounded up to 12 MiB: a larger M only
+      weakens the lower bound, so it stays valid.
 
 engines:
   gpu:
@@ -33,24 +51,46 @@ engines:
         value: 4.0e12
         source: estimate
         confidence: low
-        measured: null
+        measured: 3.68e12
         note: >-
-          10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4;
-          BF16 is assumed to run at the FP32 rate.
+          10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4.
+          Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel,
+          best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n =
+          1024-8192). Short runs: burst, not sustained.
       fp32:
         value: 4.0e12
         source: estimate
         confidence: low
-        measured: null
+        measured: 3.65e12
+        note: >-
+          Measured 2026-10-04, FMA-chain kernel, best of 20. mx.matmul fp32
+          reaches 2.62-2.79.
     bandwidth:
       value: 120.0e9
       source: estimate
       confidence: low
-      measured: null
-      note: GPU-alone achievable bandwidth; upper-bounded by total_bandwidth
+      measured: 102.7e9
+      note: >-
+        GPU-alone achievable bandwidth; upper-bounded by total_bandwidth.
+        Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best
+        of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB
+        reach ~250 GB/s; from 8 MiB up it is DRAM speed.
     usable_memory:
       value: 19069665280
       source: system
       confidence: high
       measured: null
-      note: MLX max_recommended_working_set_size (~17.76 GiB, default iogpu.wired_limit_mb)
+      note: >-
+        MLX max_recommended_working_set_size (~17.76 GiB). iogpu.wired_limit_mb
+        is 0 (system default), checked 2026-10-04.
+
+# Layer-2 costs (design notes 6.2); not used by the physical bound.
+overheads:
+  gpu_launch_sync_roundtrip:
+    value: 1.0e-4
+    source: estimate
+    confidence: low
+    measured: 1.06e-4
+    note: >-
+      Seconds to launch a trivial kernel and wait for it (MLX, one
+      command buffer). Best of 200; median 135 us. Measured 2026-10-03.

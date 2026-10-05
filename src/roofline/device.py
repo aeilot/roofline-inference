@@ -66,6 +66,7 @@ class Device:
     total_bandwidth: Quantity
     capacity: Quantity
     engines: dict[str, Engine]
+    on_chip: Quantity | None = None  # bytes of on-chip storage between DRAM and the engines
 
     def engine(self, name: str) -> Engine:
         if name not in self.engines:
@@ -93,4 +94,5 @@ def load_device(path: str | Path) -> Device:
         total_bandwidth=Quantity.from_dict(data["memory"]["total_bandwidth"]),
         capacity=Quantity.from_dict(data["memory"]["capacity"]),
         engines=engines,
+        on_chip=Quantity.from_dict(data["memory"]["on_chip"]) if "on_chip" in data["memory"] else None,
     )

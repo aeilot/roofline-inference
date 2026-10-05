@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from roofline import decode, load_device, load_model, physical_bound, prefill
+from roofline import decode, load_device, load_model, operator_bound, physical_bound, prefill
 
 
 def main() -> None:
@@ -13,6 +13,10 @@ def main() -> None:
     p.add_argument("--device", default="configs/hardware/m4_mba_24g.yaml")
     p.add_argument("--model", required=True)
     p.add_argument("--engine", default="gpu")
+    p.add_argument("--bound", choices=["physical", "operator"], default="physical",
+                   help="operator: finite on-chip memory, operator boundary at every GEMM")
+    p.add_argument("--on-chip-mib", type=float, default=None,
+                   help="override memory.on_chip for --bound operator")
     sub = p.add_subparsers(dest="phase", required=True)
     d = sub.add_parser("decode")
     d.add_argument("--batch", type=int, default=1)
@@ -28,7 +32,11 @@ def main() -> None:
         w = decode(model, args.batch, args.context)
     else:
         w = prefill(model, args.batch, args.prompt_len)
-    b = physical_bound(w, device, engine=args.engine, dtype=model.weight_dtype)
+    if args.bound == "physical":
+        b = physical_bound(w, device, engine=args.engine, dtype=model.weight_dtype)
+    else:
+        on_chip = None if args.on_chip_mib is None else args.on_chip_mib * 2**20
+        b = operator_bound(w, device, engine=args.engine, dtype=model.weight_dtype, on_chip_bytes=on_chip)
     print(json.dumps(b.to_dict(), indent=2))
 
 

@@ -85,6 +85,15 @@ python -m roofline --model configs/models/qwen3_0.6b.yaml decode --batch 1 --con
 python -m roofline --model configs/models/qwen3_0.6b.yaml prefill --prompt-len 1024
 ```
 
+`--bound operator` replaces the unlimited on-chip storage of the physical
+bound with the measured on-chip capacity M and an operator boundary at every
+GEMM, and bounds each GEMM's traffic with the red-blue pebble game
+(`src/roofline/pebble.py`). `--on-chip-mib` relaxes or tightens M:
+
+```bash
+python -m roofline --bound operator --on-chip-mib 0.25 --model configs/models/qwen3_0.6b.yaml prefill --prompt-len 1024
+```
+
 ## Background
 
 The roofline model bounds attainable performance by

@@ -83,5 +83,52 @@ def test_measured_overrides_value():
 def test_real_specs_load(model):
     m4 = load_device(M4)
     b = physical_bound(decode(model, batch=1, context=0), m4)
-    assert b.to_dict()["inputs"]["gpu.bandwidth"]["origin"] == "estimate"
+    assert b.to_dict()["inputs"]["gpu.bandwidth"]["origin"] in {"estimate", "measured"}
     assert 0 < b.tokens_per_s < 1000
+
+
+# --- finite on-chip memory (pebble.py) ---------------------------------------
+
+from roofline import operator_bound  # noqa: E402
+from roofline.pebble import gemm_traffic, mmm_read_lower_bound, pebble_critical_on_chip  # noqa: E402
+from roofline.workload import Gemm  # noqa: E402
+
+
+def test_mmm_read_lower_bound_formula():
+    # Smith et al. Corollary 3.8: 2mnk/sqrt(M) - mn - 2M.
+    assert mmm_read_lower_bound(1000, 1000, 1000, 10_000) == 2e9 / 100 - 1e6 - 2e4
+
+
+def test_operator_bound_reduces_to_physical_with_unlimited_on_chip(model, device):
+    for w in (decode(model, 8, 512), prefill(model, 2, 2048)):
+        p = physical_bound(w, device)
+        o = operator_bound(w, device, on_chip_bytes=float("inf"))
+        assert o.dram_bytes == pytest.approx(p.dram_bytes)
+        assert o.time_s == pytest.approx(p.time_s)
+
+
+def test_operator_traffic_grows_as_on_chip_shrinks(model, device):
+    w = prefill(model, 4, 2048)
+    sizes = [2**k for k in range(14, 26)]  # 16 KiB .. 32 MiB
+    traffic = [operator_bound(w, device, on_chip_bytes=s).dram_bytes for s in sizes]
+    assert all(a >= b for a, b in zip(traffic, traffic[1:]))
+    assert traffic[-1] >= physical_bound(w, device).dram_bytes
+
+
+def test_pebble_term_binds_below_critical_size():
+    g = Gemm("x", m=4096, n=4096, k=4096, count=1, elem_bytes=2)
+    crit = pebble_critical_on_chip(g)
+    assert 0 < crit < (g.k * g.n + g.m * g.k) * 2
+    assert gemm_traffic(g, crit / 2).binding_read_term == "pebble"
+    assert gemm_traffic(g, crit * 2).binding_read_term != "pebble"
+
+
+def test_operator_bound_needs_on_chip(model, device):
+    with pytest.raises(ValueError):
+        operator_bound(decode(model, 1, 0), device)  # toy device has no on_chip
+
+
+def test_real_spec_on_chip_loads(model):
+    b = operator_bound(prefill(model, 1, 1024), load_device(M4))
+    assert b.to_dict()["inputs"]["memory.on_chip"]["origin"] in {"estimate", "measured"}
+    assert b.to_dict()["bound"] == "operator"
