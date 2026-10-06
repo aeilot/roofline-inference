@@ -1,0 +1,1274 @@
+{
+ "device": "m4_mba_24g",
+ "model": "qwen3_0.6b",
+ "boundaries": {
+  "core": {
+   "fast_bytes_per_processor": 524288.0,
+   "processors": 10,
+   "bandwidth": 770000000000.0
+  },
+  "chip": {
+   "fast_bytes_per_processor": 17825792.0,
+   "processors": 1,
+   "bandwidth": 102700000000.0
+  }
+ },
+ "steps": [
+  {
+   "phase": "decode",
+   "batch": 1,
+   "new": 1,
+   "cached": 512,
+   "flops": 1309638656.0,
+   "peak_flops": 3680000000000.0,
+   "inputs": {
+    "gpu.compute.bf16": {
+     "value": 3680000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "core.capacity": {
+     "value": 524288.0,
+     "origin": "estimate",
+     "confidence": "low",
+     "instances": 10
+    },
+    "core.bandwidth": {
+     "value": 770000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "chip.capacity": {
+     "value": 12582912.0,
+     "origin": "measured",
+     "confidence": "high",
+     "instances": 1
+    },
+    "chip.bandwidth": {
+     "value": 102700000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    }
+   },
+   "fused": {
+    "time_s": 0.012006903602726387,
+    "bottleneck": "io.chip",
+    "resource_time_s": {
+     "compute": 0.0003558800695652174,
+     "io.core": 0.001617781703896104,
+     "io.chip": 0.012006903602726387
+    },
+    "intensity": {
+     "core": 1.0513343174054421,
+     "chip": 1.0620623610727031
+    },
+    "bytes": {
+     "core": 1245691912.0,
+     "chip": 1233109000.0
+    },
+    "terms": {
+     "core": {
+      "compulsory": 1245691912.0,
+      "pebble": 0.0
+     },
+     "chip": {
+      "compulsory": 1233109000.0,
+      "pebble": 0.0
+     }
+    }
+   },
+   "operator": {
+    "time_s": 0.012006903602726387,
+    "bottleneck": "io.chip",
+    "resource_time_s": {
+     "compute": 0.0003558800695652174,
+     "io.core": 0.001617781703896104,
+     "io.chip": 0.012006903602726387
+    },
+    "intensity": {
+     "core": 1.0513343174054421,
+     "chip": 1.0620623610727031
+    },
+    "bytes": {
+     "core": 1245691912.0,
+     "chip": 1233109000.0
+    },
+    "groups": {
+     "core": {
+      "qkv": {
+       "flops": 234881024.0,
+       "bytes": 234995712.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 117440512.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 528482304.0,
+       "bytes": 528482304.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 117669888.0,
+       "bytes": 58720256.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     },
+     "chip": {
+      "qkv": {
+       "flops": 234881024.0,
+       "bytes": 234995712.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 117440512.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 528482304.0,
+       "bytes": 528482304.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 117669888.0,
+       "bytes": 58720256.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "phase": "decode",
+   "batch": 1,
+   "new": 1,
+   "cached": 4096,
+   "flops": 2131722240.0,
+   "peak_flops": 3680000000000.0,
+   "inputs": {
+    "gpu.compute.bf16": {
+     "value": 3680000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "core.capacity": {
+     "value": 524288.0,
+     "origin": "estimate",
+     "confidence": "low",
+     "instances": 10
+    },
+    "core.bandwidth": {
+     "value": 770000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "chip.capacity": {
+     "value": 12582912.0,
+     "origin": "measured",
+     "confidence": "high",
+     "instances": 1
+    },
+    "chip.bandwidth": {
+     "value": 102700000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    }
+   },
+   "fused": {
+    "time_s": 0.016009257955209348,
+    "bottleneck": "io.chip",
+    "resource_time_s": {
+     "compute": 0.000579272347826087,
+     "io.core": 0.002151602212987013,
+     "io.chip": 0.016009257955209348
+    },
+    "intensity": {
+     "core": 1.2867018005689101,
+     "chip": 1.2965491063060595
+    },
+    "bytes": {
+     "core": 1656733704.0,
+     "chip": 1644150792.0
+    },
+    "terms": {
+     "core": {
+      "compulsory": 1656733704.0,
+      "pebble": 0.0
+     },
+     "chip": {
+      "compulsory": 1644150792.0,
+      "pebble": 0.0
+     }
+    }
+   },
+   "operator": {
+    "time_s": 0.016009257955209348,
+    "bottleneck": "io.chip",
+    "resource_time_s": {
+     "compute": 0.000579272347826087,
+     "io.core": 0.002151602212987013,
+     "io.chip": 0.016009257955209348
+    },
+    "intensity": {
+     "core": 1.2867018005689101,
+     "chip": 1.2965491063060595
+    },
+    "bytes": {
+     "core": 1656733704.0,
+     "chip": 1644150792.0
+    },
+    "groups": {
+     "core": {
+      "qkv": {
+       "flops": 234881024.0,
+       "bytes": 234995712.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 117440512.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 528482304.0,
+       "bytes": 528482304.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 939753472.0,
+       "bytes": 469762048.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     },
+     "chip": {
+      "qkv": {
+       "flops": 234881024.0,
+       "bytes": 234995712.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 117440512.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 528482304.0,
+       "bytes": 528482304.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 939753472.0,
+       "bytes": 469762048.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "phase": "decode",
+   "batch": 1,
+   "new": 1,
+   "cached": 32768,
+   "flops": 8708390912.0,
+   "peak_flops": 3680000000000.0,
+   "inputs": {
+    "gpu.compute.bf16": {
+     "value": 3680000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "core.capacity": {
+     "value": 524288.0,
+     "origin": "estimate",
+     "confidence": "low",
+     "instances": 10
+    },
+    "core.bandwidth": {
+     "value": 770000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "chip.capacity": {
+     "value": 12582912.0,
+     "origin": "measured",
+     "confidence": "high",
+     "instances": 1
+    },
+    "chip.bandwidth": {
+     "value": 102700000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    }
+   },
+   "fused": {
+    "time_s": 0.04802809277507303,
+    "bottleneck": "io.chip",
+    "resource_time_s": {
+     "compute": 0.0023664105739130436,
+     "io.core": 0.0064221662857142855,
+     "io.chip": 0.04802809277507303
+    },
+    "intensity": {
+     "core": 1.761025498852388,
+     "chip": 1.7655179257542
+    },
+    "bytes": {
+     "core": 4945068040.0,
+     "chip": 4932485128.0
+    },
+    "terms": {
+     "core": {
+      "compulsory": 4945068040.0,
+      "pebble": 0.0
+     },
+     "chip": {
+      "compulsory": 4932485128.0,
+      "pebble": 0.0
+     }
+    }
+   },
+   "operator": {
+    "time_s": 0.04802809277507303,
+    "bottleneck": "io.chip",
+    "resource_time_s": {
+     "compute": 0.0023664105739130436,
+     "io.core": 0.0064221662857142855,
+     "io.chip": 0.04802809277507303
+    },
+    "intensity": {
+     "core": 1.761025498852388,
+     "chip": 1.7655179257542
+    },
+    "bytes": {
+     "core": 4945068040.0,
+     "chip": 4932485128.0
+    },
+    "groups": {
+     "core": {
+      "qkv": {
+       "flops": 234881024.0,
+       "bytes": 234995712.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 117440512.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 528482304.0,
+       "bytes": 528482304.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 7516422144.0,
+       "bytes": 3758096384.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     },
+     "chip": {
+      "qkv": {
+       "flops": 234881024.0,
+       "bytes": 234995712.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 117440512.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 528482304.0,
+       "bytes": 528482304.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 7516422144.0,
+       "bytes": 3758096384.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "phase": "prefill",
+   "batch": 1,
+   "new": 16,
+   "cached": 0,
+   "flops": 14435221504.0,
+   "peak_flops": 3680000000000.0,
+   "inputs": {
+    "gpu.compute.bf16": {
+     "value": 3680000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "core.capacity": {
+     "value": 524288.0,
+     "origin": "estimate",
+     "confidence": "low",
+     "instances": 10
+    },
+    "core.bandwidth": {
+     "value": 770000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "chip.capacity": {
+     "value": 12582912.0,
+     "origin": "measured",
+     "confidence": "high",
+     "instances": 1
+    },
+    "chip.bandwidth": {
+     "value": 102700000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    }
+   },
+   "fused": {
+    "time_s": 0.011451890204479065,
+    "bottleneck": "io.chip",
+    "resource_time_s": {
+     "compute": 0.003922614539130434,
+     "io.core": 0.0015437558909090908,
+     "io.chip": 0.011451890204479065
+    },
+    "intensity": {
+     "core": 12.143785830832302,
+     "chip": 12.273709309307254
+    },
+    "bytes": {
+     "core": 1188692036.0,
+     "chip": 1176109124.0
+    },
+    "terms": {
+     "core": {
+      "compulsory": 1188692036.0,
+      "pebble": 1478257.2243598502
+     },
+     "chip": {
+      "compulsory": 1176109124.0,
+      "pebble": 0.0
+     }
+    }
+   },
+   "operator": {
+    "time_s": 0.011451890204479065,
+    "bottleneck": "io.chip",
+    "resource_time_s": {
+     "compute": 0.003922614539130434,
+     "io.core": 0.0015437558909090908,
+     "io.chip": 0.011451890204479065
+    },
+    "intensity": {
+     "core": 12.143785830832302,
+     "chip": 12.273709309307254
+    },
+    "bytes": {
+     "core": 1188692036.0,
+     "chip": 1176109124.0
+    },
+    "groups": {
+     "core": {
+      "qkv": {
+       "flops": 3758096384.0,
+       "bytes": 236716032.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 1879048192.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 8455716864.0,
+       "bytes": 528482304.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 31195136.0,
+       "bytes": 0.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     },
+     "chip": {
+      "qkv": {
+       "flops": 3758096384.0,
+       "bytes": 236716032.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 1879048192.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 8455716864.0,
+       "bytes": 528482304.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 31195136.0,
+       "bytes": 0.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "phase": "prefill",
+   "batch": 1,
+   "new": 64,
+   "cached": 0,
+   "flops": 57159712768.0,
+   "peak_flops": 3680000000000.0,
+   "inputs": {
+    "gpu.compute.bf16": {
+     "value": 3680000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "core.capacity": {
+     "value": 524288.0,
+     "origin": "estimate",
+     "confidence": "low",
+     "instances": 10
+    },
+    "core.bandwidth": {
+     "value": 770000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "chip.capacity": {
+     "value": 12582912.0,
+     "origin": "measured",
+     "confidence": "high",
+     "instances": 1
+    },
+    "chip.bandwidth": {
+     "value": 102700000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    }
+   },
+   "fused": {
+    "time_s": 0.015532530643478261,
+    "bottleneck": "compute",
+    "resource_time_s": {
+     "compute": 0.015532530643478261,
+     "io.core": 0.0015509055220779221,
+     "io.chip": 0.011505495034079844
+    },
+    "intensity": {
+     "core": 47.86454890284742,
+     "chip": 48.37425446952514
+    },
+    "bytes": {
+     "core": 1194197252.0,
+     "chip": 1181614340.0
+    },
+    "terms": {
+     "core": {
+      "compulsory": 1194197252.0,
+      "pebble": 14169804.887192775
+     },
+     "chip": {
+      "compulsory": 1181614340.0,
+      "pebble": 0.0
+     }
+    }
+   },
+   "operator": {
+    "time_s": 0.015532530643478261,
+    "bottleneck": "compute",
+    "resource_time_s": {
+     "compute": 0.015532530643478261,
+     "io.core": 0.0015509055220779221,
+     "io.chip": 0.011505495034079844
+    },
+    "intensity": {
+     "core": 47.86454890284742,
+     "chip": 48.37425446952514
+    },
+    "bytes": {
+     "core": 1194197252.0,
+     "chip": 1181614340.0
+    },
+    "groups": {
+     "core": {
+      "qkv": {
+       "flops": 15032385536.0,
+       "bytes": 242221056.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 7516192768.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 33822867456.0,
+       "bytes": 528482304.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 477102080.0,
+       "bytes": 0.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     },
+     "chip": {
+      "qkv": {
+       "flops": 15032385536.0,
+       "bytes": 242221056.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 7516192768.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 33822867456.0,
+       "bytes": 528482304.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 477102080.0,
+       "bytes": 0.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "phase": "prefill",
+   "batch": 1,
+   "new": 512,
+   "cached": 0,
+   "flops": 481406222336.0,
+   "peak_flops": 3680000000000.0,
+   "inputs": {
+    "gpu.compute.bf16": {
+     "value": 3680000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "core.capacity": {
+     "value": 524288.0,
+     "origin": "estimate",
+     "confidence": "low",
+     "instances": 10
+    },
+    "core.bandwidth": {
+     "value": 770000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "chip.capacity": {
+     "value": 12582912.0,
+     "origin": "measured",
+     "confidence": "high",
+     "instances": 1
+    },
+    "chip.bandwidth": {
+     "value": 102700000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    }
+   },
+   "fused": {
+    "time_s": 0.13081690824347825,
+    "bottleneck": "compute",
+    "resource_time_s": {
+     "compute": 0.13081690824347825,
+     "io.core": 0.001617635412987013,
+     "io.chip": 0.012005806777020447
+    },
+    "intensity": {
+     "core": 386.4918393423356,
+     "chip": 390.43604629760966
+    },
+    "bytes": {
+     "core": 1245579268.0,
+     "chip": 1232996356.0
+    },
+    "terms": {
+     "core": {
+      "compulsory": 1245579268.0,
+      "pebble": 145722841.9344847
+     },
+     "chip": {
+      "compulsory": 1232996356.0,
+      "pebble": 693315.193257916
+     }
+    }
+   },
+   "operator": {
+    "time_s": 0.13081690824347825,
+    "bottleneck": "compute",
+    "resource_time_s": {
+     "compute": 0.13081690824347825,
+     "io.core": 0.0016557654493506494,
+     "io.chip": 0.012005806777020447
+    },
+    "intensity": {
+     "core": 377.5914555988824,
+     "chip": 390.43604629760966
+    },
+    "bytes": {
+     "core": 1274939396.0,
+     "chip": 1232996356.0
+    },
+    "groups": {
+     "core": {
+      "qkv": {
+       "flops": 120259084288.0,
+       "bytes": 293601280.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 60129542144.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 270582939648.0,
+       "bytes": 557842432.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 30123491328.0,
+       "bytes": 0.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     },
+     "chip": {
+      "qkv": {
+       "flops": 120259084288.0,
+       "bytes": 293601280.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 60129542144.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 270582939648.0,
+       "bytes": 528482304.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 30123491328.0,
+       "bytes": 0.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "phase": "prefill",
+   "batch": 1,
+   "new": 4096,
+   "cached": 0,
+   "flops": 5532698804224.0,
+   "peak_flops": 3680000000000.0,
+   "inputs": {
+    "gpu.compute.bf16": {
+     "value": 3680000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "core.capacity": {
+     "value": 524288.0,
+     "origin": "estimate",
+     "confidence": "low",
+     "instances": 10
+    },
+    "core.bandwidth": {
+     "value": 770000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "chip.capacity": {
+     "value": 12582912.0,
+     "origin": "measured",
+     "confidence": "high",
+     "instances": 1
+    },
+    "chip.bandwidth": {
+     "value": 102700000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    }
+   },
+   "fused": {
+    "time_s": 1.5034507620173914,
+    "bottleneck": "compute",
+    "resource_time_s": {
+     "compute": 1.5034507620173914,
+     "io.core": 0.00215147454025974,
+     "io.chip": 0.016008300720545276
+    },
+    "intensity": {
+     "core": 3339.7202652936676,
+     "chip": 3365.281131878999
+    },
+    "bytes": {
+     "core": 1656635396.0,
+     "chip": 1644052484.0
+    },
+    "terms": {
+     "core": {
+      "compulsory": 1656635396.0,
+      "pebble": 1211198570.221292
+     },
+     "chip": {
+      "compulsory": 1644052484.0,
+      "pebble": 27016314.09681226
+     }
+    }
+   },
+   "operator": {
+    "time_s": 1.5034507620173914,
+    "bottleneck": "compute",
+    "resource_time_s": {
+     "compute": 1.5034507620173914,
+     "io.core": 0.017861049522077923,
+     "io.chip": 0.03116007076923077
+    },
+    "intensity": {
+     "core": 402.2900845489008,
+     "chip": 1728.893132729747
+    },
+    "bytes": {
+     "core": 13753008132.0,
+     "chip": 3200139268.0
+    },
+    "groups": {
+     "core": {
+      "qkv": {
+       "flops": 962072674304.0,
+       "bytes": 3317694464.0,
+       "binding": {
+        "pebble": 28
+       }
+      },
+      "o_proj": {
+       "flops": 481036337152.0,
+       "bytes": 1438646272.0,
+       "binding": {
+        "pebble": 28
+       }
+      },
+      "mlp": {
+       "flops": 2164663517184.0,
+       "bytes": 7574913024.0,
+       "binding": {
+        "pebble": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 1924615110656.0,
+       "bytes": 1115684864.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     },
+     "chip": {
+      "qkv": {
+       "flops": 962072674304.0,
+       "bytes": 704643072.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 481036337152.0,
+       "bytes": 117440512.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 2164663517184.0,
+       "bytes": 1644167168.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 1924615110656.0,
+       "bytes": 440401920.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "phase": "prefill",
+   "batch": 1,
+   "new": 32768,
+   "cached": 0,
+   "flops": 152011551801344.0,
+   "peak_flops": 3680000000000.0,
+   "inputs": {
+    "gpu.compute.bf16": {
+     "value": 3680000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "core.capacity": {
+     "value": 524288.0,
+     "origin": "estimate",
+     "confidence": "low",
+     "instances": 10
+    },
+    "core.bandwidth": {
+     "value": 770000000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    },
+    "chip.capacity": {
+     "value": 12582912.0,
+     "origin": "measured",
+     "confidence": "high",
+     "instances": 1
+    },
+    "chip.bandwidth": {
+     "value": 102700000000.0,
+     "origin": "measured",
+     "confidence": "high"
+    }
+   },
+   "fused": {
+    "time_s": 41.30748690253913,
+    "bottleneck": "compute",
+    "resource_time_s": {
+     "compute": 41.30748690253913,
+     "io.core": 0.012645691923273193,
+     "io.chip": 0.048028252268743916
+    },
+    "intensity": {
+     "core": 15611.45099373146,
+     "chip": 30818.348773902493
+    },
+    "bytes": {
+     "core": 9737182780.920359,
+     "chip": 4932501508.0
+    },
+    "terms": {
+     "core": {
+      "compulsory": 4945084420.0,
+      "pebble": 9737182780.920359
+     },
+     "chip": {
+      "compulsory": 4932501508.0,
+      "pebble": 86838206.80583796
+     }
+    }
+   },
+   "operator": {
+    "time_s": 41.30748690253913,
+    "bottleneck": "compute",
+    "resource_time_s": {
+     "compute": 41.30748690253913,
+     "io.core": 0.17557560812571427,
+     "io.chip": 0.4202472070496592
+    },
+    "intensity": {
+     "core": 1124.4021982862891,
+     "chip": 3522.0970052615226
+    },
+    "bytes": {
+     "core": 135193218256.79999,
+     "chip": 43159388164.0
+    },
+    "groups": {
+     "core": {
+      "qkv": {
+       "flops": 7696581394432.0,
+       "bytes": 29624369152.0,
+       "binding": {
+        "pebble": 28
+       }
+      },
+      "o_proj": {
+       "flops": 3848290697216.0,
+       "bytes": 14591983616.0,
+       "binding": {
+        "pebble": 28
+       }
+      },
+      "mlp": {
+       "flops": 17317308137472.0,
+       "bytes": 66764931072.0,
+       "binding": {
+        "pebble": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 123149060407296.0,
+       "bytes": 23905750220.799995,
+       "binding": {
+        "pebble": 28
+       }
+      }
+     },
+     "chip": {
+      "qkv": {
+       "flops": 7696581394432.0,
+       "bytes": 8631877632.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "o_proj": {
+       "flops": 3848290697216.0,
+       "bytes": 4756340736.0,
+       "binding": {
+        "compulsory": 28
+       }
+      },
+      "mlp": {
+       "flops": 17317308137472.0,
+       "bytes": 19201523712.0,
+       "binding": {
+        "compulsory": 56
+       }
+      },
+      "lm_head": {
+       "flops": 311164928.0,
+       "bytes": 311164928.0,
+       "binding": {
+        "compulsory": 1
+       }
+      },
+      "attention": {
+       "flops": 123149060407296.0,
+       "bytes": 10276044800.0,
+       "binding": {
+        "compulsory": 28
+       }
+      }
+     }
+    }
+   }
+  }
+ ]
+}
