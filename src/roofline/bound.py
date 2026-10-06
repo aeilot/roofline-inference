@@ -74,6 +74,8 @@ class Bound:
         }
         if self.traffic:
             out["gemms"] = self.traffic["gemms"]
+            if self.traffic.get("attention"):
+                out["attention"] = self.traffic["attention"]
         if w.phase == "decode":
             out["per_sequence_tokens_per_s"] = 1 / self.time_s
         else:
@@ -86,21 +88,28 @@ def physical_bound(workload: Workload, device: Device, engine: str = "gpu", dtyp
     e = device.engine(engine)
     peak = e.peak_flops(dtype)
     bandwidth = device.bandwidth(engine)
+    resources = {
+        "compute": workload.total_flops / peak.effective,
+        "dram_bandwidth": workload.total_bytes / bandwidth,
+    }
+    inputs = {
+        f"{engine}.compute.{dtype}": peak.describe(),
+        f"{engine}.bandwidth": e.bandwidth.describe(),
+        "memory.total_bandwidth": device.total_bandwidth.describe(),
+        f"{engine}.usable_memory": e.usable_memory.describe(),
+    }
+    # Special functions run on their own units: a separate resource in the max.
+    for name, count in workload.special.items():
+        if name in e.special:
+            resources[name] = count / e.special[name].effective
+            inputs[f"{engine}.special.{name}"] = e.special[name].describe()
     return Bound(
         workload=workload,
         engine=engine,
         dtype=dtype,
-        resource_time_s={
-            "compute": workload.total_flops / peak.effective,
-            "dram_bandwidth": workload.total_bytes / bandwidth,
-        },
+        resource_time_s=resources,
         memory_limit=e.usable_memory.effective,
-        inputs={
-            f"{engine}.compute.{dtype}": peak.describe(),
-            f"{engine}.bandwidth": e.bandwidth.describe(),
-            "memory.total_bandwidth": device.total_bandwidth.describe(),
-            f"{engine}.usable_memory": e.usable_memory.describe(),
-        },
+        inputs=inputs,
     )
 
 
@@ -136,3 +145,29 @@ def operator_bound(
         kind="operator",
         traffic=traffic,
     )
+
+
+def ttft(model, device: Device, prompt_len: int, engine: str = "gpu") -> float:
+    """Time to first token: prefill of the prompt, LM head and sampling of the last position."""
+    from roofline.workload import prefill
+
+    return physical_bound(prefill(model, 1, prompt_len), device, engine, model.weight_dtype).time_s
+
+
+def request_time(model, device: Device, prompt_len: int, gen: int, engine: str = "gpu") -> dict:
+    """T_request(L, N) = TTFT(L) + sum_{i=1}^{N-1} T_decode(L + i) (design notes 5.4).
+
+    Decode step i processes generated token i with L + i - 1 tokens cached,
+    attending to L + i positions."""
+    from roofline.workload import decode
+
+    t_prefill = ttft(model, device, prompt_len, engine)
+    steps = [physical_bound(decode(model, 1, prompt_len + i - 1), device, engine, model.weight_dtype).time_s
+             for i in range(1, gen)]
+    total = t_prefill + sum(steps)
+    return {
+        "prompt_len": prompt_len, "gen": gen,
+        "ttft_s": t_prefill, "decode_s": sum(steps), "total_s": total,
+        "prefill_share": t_prefill / total,
+        "decode_first_s": steps[0] if steps else 0.0, "decode_last_s": steps[-1] if steps else 0.0,
+    }

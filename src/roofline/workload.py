@@ -1,8 +1,9 @@
 """FLOPs, minimum DRAM traffic and memory footprint for one inference step.
 
 Traffic assumes ideal fusion (the physical bound): every weight is read once
-per step, each cached K/V is read once, new K/V is written once, and
-intermediate activations and logits never leave the chip. Elementwise work
+per step, each cached K/V is read once, new K/V is written once, token ids
+are read and the sampled ids written, and intermediate activations and
+logits never leave the chip. Elementwise work
 (norms, RoPE, SiLU, softmax, residuals) is not counted in FLOPs.
 """
 
@@ -11,6 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from roofline.model import ModelSpec
+
+TOKEN_BYTES = 4  # int32 token ids
 
 
 @dataclass(frozen=True)
@@ -31,6 +34,21 @@ class Gemm:
 
 
 @dataclass(frozen=True)
+class Attention:
+    """Score/value attention of one layer, repeated `count` times per step.
+
+    `scores` counts the QK^T entries actually computed, over all query heads
+    and sequences (causal entries only in prefill). FLOPs are 4 * scores *
+    head_dim (QK^T and PV).
+    """
+
+    scores: int
+    head_dim: int
+    count: int
+    elem_bytes: int
+
+
+@dataclass(frozen=True)
 class Workload:
     phase: str  # "decode" | "prefill"
     batch: int
@@ -39,6 +57,14 @@ class Workload:
     bytes: dict[str, float]  # DRAM traffic
     memory: dict[str, float]  # resident footprint
     gemms: tuple[Gemm, ...] = ()
+    attention: Attention | None = None
+
+    @property
+    def special(self) -> dict[str, float]:
+        """Special-function counts: one exp per attention score."""
+        if self.attention is None:
+            return {}
+        return {"exp": self.attention.scores * self.attention.count}
 
     @property
     def total_flops(self) -> float:
@@ -67,6 +93,12 @@ def _weights_read_bytes(m: ModelSpec) -> int:
     final_norm = m.hidden_size
     head = m.vocab_size * m.hidden_size
     return (layers + final_norm + head) * m.weight_bytes_per_param
+
+
+def _embedding_gather_bytes(m: ModelSpec, rows: int) -> int:
+    """Embedding rows gathered for `rows` tokens. With tied embeddings the
+    rows are part of the LM-head read, which already reads the whole table."""
+    return 0 if m.tie_word_embeddings else rows * m.hidden_size * m.weight_bytes_per_param
 
 
 def _gemms(m: ModelSpec, rows: int, head_rows: int) -> tuple[Gemm, ...]:
@@ -98,7 +130,8 @@ def decode(m: ModelSpec, batch: int, context: int) -> Workload:
     }
     traffic = {
         "weights": _weights_read_bytes(m),
-        "embedding_gather": batch * m.hidden_size * m.weight_bytes_per_param,
+        "embedding_gather": _embedding_gather_bytes(m, batch),
+        "token_io": 2 * batch * TOKEN_BYTES,
         "kv_read": batch * context * m.kv_bytes_per_token,
         "kv_write": batch * m.kv_bytes_per_token,
     }
@@ -106,7 +139,8 @@ def decode(m: ModelSpec, batch: int, context: int) -> Workload:
         "weights": m.weight_bytes,
         "kv_cache": batch * attended * m.kv_bytes_per_token,
     }
-    return Workload("decode", batch, batch, flops, traffic, memory, _gemms(m, batch, batch))
+    attention = Attention(m.num_heads * attended * batch, m.head_dim, m.num_layers, m.kv_bytes_per_elem)
+    return Workload("decode", batch, batch, flops, traffic, memory, _gemms(m, batch, batch), attention)
 
 
 def prefill(m: ModelSpec, batch: int, prompt_len: int) -> Workload:
@@ -124,7 +158,8 @@ def prefill(m: ModelSpec, batch: int, prompt_len: int) -> Workload:
     }
     traffic = {
         "weights": _weights_read_bytes(m),
-        "embedding_gather": batch * p * m.hidden_size * m.weight_bytes_per_param,
+        "embedding_gather": _embedding_gather_bytes(m, batch * p),
+        "token_io": (batch * p + batch) * TOKEN_BYTES,
         "kv_read": 0,
         "kv_write": batch * p * m.kv_bytes_per_token,
     }
@@ -132,4 +167,7 @@ def prefill(m: ModelSpec, batch: int, prompt_len: int) -> Workload:
         "weights": m.weight_bytes,
         "kv_cache": batch * p * m.kv_bytes_per_token,
     }
-    return Workload("prefill", batch, batch * p, flops, traffic, memory, _gemms(m, batch * p, batch))
+    attention = Attention(m.num_heads * causal_pairs * batch, m.head_dim, m.num_layers, m.kv_bytes_per_elem)
+    return Workload(
+        "prefill", batch, batch * p, flops, traffic, memory, _gemms(m, batch * p, batch), attention
+    )

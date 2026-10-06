@@ -6,6 +6,9 @@ import argparse
 import json
 
 from roofline import decode, load_device, load_model, operator_bound, physical_bound, prefill
+from roofline.bound import request_time
+from roofline.graph import decode_graph, prefill_graph
+from roofline.iobound import io_bound
 
 
 def main() -> None:
@@ -13,8 +16,9 @@ def main() -> None:
     p.add_argument("--device", default="configs/hardware/m4_mba_24g.yaml")
     p.add_argument("--model", required=True)
     p.add_argument("--engine", default="gpu")
-    p.add_argument("--bound", choices=["physical", "operator"], default="physical",
-                   help="operator: finite on-chip memory, operator boundary at every GEMM")
+    p.add_argument("--bound", choices=["physical", "operator", "hierarchy"], default="physical",
+                   help="operator: finite on-chip memory, operator boundary at every GEMM; "
+                        "hierarchy: multi-level, multi-processor bounds on the graph (fused and operator)")
     p.add_argument("--on-chip-mib", type=float, default=None,
                    help="override memory.on_chip for --bound operator")
     sub = p.add_subparsers(dest="phase", required=True)
@@ -24,10 +28,23 @@ def main() -> None:
     f = sub.add_parser("prefill")
     f.add_argument("--batch", type=int, default=1)
     f.add_argument("--prompt-len", type=int, required=True)
+    r = sub.add_parser("request", help="TTFT(L) + decode of N tokens, physical bound")
+    r.add_argument("--prompt-len", type=int, required=True)
+    r.add_argument("--gen", type=int, required=True)
     args = p.parse_args()
 
     model = load_model(args.model)
     device = load_device(args.device)
+    if args.phase == "request":
+        print(json.dumps(request_time(model, device, args.prompt_len, args.gen, args.engine), indent=2))
+        return
+    if args.bound == "hierarchy":
+        if args.phase == "decode":
+            g = decode_graph(model, args.batch, args.context)
+        else:
+            g = prefill_graph(model, args.batch, args.prompt_len)
+        print(json.dumps(io_bound(g, device, engine=args.engine, dtype=model.weight_dtype).to_dict(), indent=2))
+        return
     if args.phase == "decode":
         w = decode(model, args.batch, args.context)
     else:

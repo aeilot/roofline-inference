@@ -65,6 +65,17 @@ engines:
         note: >-
           Measured 2026-10-04, FMA-chain kernel, best of 20. mx.matmul fp32
           reaches 2.62-2.79.
+    special:
+      exp:
+        value: 5.0e11
+        source: estimate
+        confidence: low
+        measured: 4.6e11
+        note: >-
+          exp/s (metal::fast::exp), the softmax resource: one exp per attention
+          score. Measured 2026-10-06 with benchmarks/compute_shapes.py, 8
+          independent exp+fmul chains per thread; counted as a separate
+          resource (max with FMA time, not added).
     bandwidth:
       value: 120.0e9
       source: estimate
@@ -84,6 +95,44 @@ engines:
         MLX max_recommended_working_set_size (~17.76 GiB). iogpu.wired_limit_mb
         is 0 (system default), checked 2026-10-04.
 
+# Memory hierarchy for the multi-level, multi-processor pebble bound (design
+# notes 6.8), from the cores outward. Each level: capacity per instance, number
+# of instances (private per core or shared), and the aggregate bandwidth of the
+# boundary between this level and the next slower one. Capacities must be
+# upper estimates: a larger capacity only weakens the lower bound.
+hierarchy:
+  - name: core
+    instances: 10
+    capacity:
+      value: 524288
+      source: estimate
+      confidence: low
+      measured: null
+      note: >-
+        Per-core on-chip SRAM: registers, threadgroup memory and cache. Since
+        M3 (Dynamic Caching) these share one memory per core; Apple does not
+        publish its size. benchmarks/hierarchy.py (2026-10-06): with one
+        threadgroup per core, buffers up to 128-176 KiB are served at ~1.35
+        TB/s; with four groups per core the visible cache drops below 48 KiB,
+        i.e. registers take the same SRAM. 512 KiB is a deliberate upper
+        estimate (about 2x the largest observed cache), not a measurement.
+    bandwidth:
+      value: 7.0e11
+      source: estimate
+      confidence: low
+      measured: 7.7e11
+      note: >-
+        Aggregate bandwidth from the shared on-chip cache (GPU L2) into the
+        cores. benchmarks/hierarchy.py shared-read sweep, 160 groups, every
+        group streams the whole buffer: 700-774 GB/s (best) for 0.4-2.9 MiB,
+        falling from 4 MiB (SLC, 480 -> 150 GB/s) to DRAM speed by ~16 MiB.
+        Burst, load avg ~4. Threadgroup memory reads reach 690-890 GB/s
+        aggregate (not a boundary in this model).
+  - name: chip
+    instances: 1
+    capacity: on_chip    # memory.on_chip
+    bandwidth: gpu       # engines.gpu.bandwidth (DRAM)
+
 # Layer-2 costs (design notes 6.2); not used by the physical bound.
 overheads:
   gpu_launch_sync_roundtrip:
@@ -94,3 +143,56 @@ overheads:
     note: >-
       Seconds to launch a trivial kernel and wait for it (MLX, one
       command buffer). Best of 200; median 135 us. Measured 2026-10-03.
+  gpu_dependent_kernel_fixed:
+    value: 5.0e-6
+    source: estimate
+    confidence: low
+    measured: 2.44e-6
+    note: >-
+      t0: GPU time per dependent kernel beyond its reads (dispatch, barrier,
+      ramp). Fit of T(N, b, K) over N = 1-256, b = 64 KiB - 64 MiB, K = 1-16
+      (benchmarks/kernel_chain.py, scripts/fit_kernel_chain.py, 2026-10-06);
+      pipeline model median error 3.5% (K = 1) / 5.5% (K > 1). Independent
+      kernels overlap: 0.75x the dependent time at 64 KiB, ~1x from 1 MiB.
+  gpu_streaming_bandwidth:
+    value: 1.0e11
+    source: estimate
+    confidence: low
+    measured: 9.39e10
+    note: >-
+      B_eff: steady-state read bandwidth of a dependent chain of read kernels,
+      same fit; g(b) = t0 + b / B_eff is linear in b within +-15% (64 KiB -
+      64 MiB), so no B_eff(b) is needed.
+  cpu_encode_per_kernel:
+    value: 3.0e-6
+    source: estimate
+    confidence: low
+    measured: 2.46e-6
+    note: >-
+      e: CPU time to encode one custom kernel into an MLX command buffer
+      (time until async_eval returns), same fit. Overlaps GPU work when more
+      than one command buffer is in flight.
+  commit_per_buffer:
+    value: 2.0e-5
+    source: estimate
+    confidence: low
+    measured: 1.74e-5
+    note: c_commit per MLX command buffer, same fit.
+  gpu_cpu_sync:
+    value: 1.0e-4
+    source: estimate
+    confidence: low
+    measured: 1.48e-4
+    note: >-
+      c_sync: from the GPU finishing to the CPU seeing it (intercept of the
+      same fit). A per-token sync costs this unless the loop is pipelined.
+  dram_latency:
+    value: 3.0e-7
+    source: estimate
+    confidence: low
+    measured: 2.9e-7
+    note: >-
+      Little's-law latency L from read bandwidth vs threads with one 16-byte
+      load in flight per thread (benchmarks/concurrency.py, 2026-10-06): 282-303
+      ns across T = 32-1024; DRAM saturates at ~29 KiB in flight (~1.8k
+      requests). Pointer chase: 225 ns (64 MiB), 368 ns (256 MiB, TLB misses).

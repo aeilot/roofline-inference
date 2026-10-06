@@ -37,8 +37,9 @@ def test_qwen3_param_count(model):
 def test_decode_batch1_is_bandwidth_bound(model, device):
     b = physical_bound(decode(model, batch=1, context=0), device)
     assert b.bottleneck == "dram_bandwidth"
-    # Tied embeddings: every parameter is read once (embedding table == LM head).
-    expected_bytes = model.weight_bytes + model.hidden_size * 2 + model.kv_bytes_per_token
+    # Tied embeddings: every parameter is read once (embedding table == LM head),
+    # the gathered row is part of that read; plus the token id in and out.
+    expected_bytes = model.weight_bytes + model.kv_bytes_per_token + 2 * 4
     assert b.workload.total_bytes == expected_bytes
     # Engine bandwidth (100 GB/s) is below the total (120 GB/s), so it applies.
     assert b.time_s == pytest.approx(expected_bytes / 100e9)
@@ -132,3 +133,62 @@ def test_real_spec_on_chip_loads(model):
     b = operator_bound(prefill(model, 1, 1024), load_device(M4))
     assert b.to_dict()["inputs"]["memory.on_chip"]["origin"] in {"estimate", "measured"}
     assert b.to_dict()["bound"] == "operator"
+
+
+# --- attention I/O bound (Saha & Ye 2024, design notes 6.6) ------------------
+
+from roofline.pebble import attention_intensity_cap, attention_io_lower_bound  # noqa: E402
+
+
+def test_attention_io_lower_bound_formula():
+    # E d^2 / (M + 4d^2) - M, with M = d^2 so c = 5.
+    d = 128
+    assert attention_io_lower_bound(10**9, d, d * d) == pytest.approx(10**9 / 5 - d * d)
+    assert attention_io_lower_bound(10**9, d, float("inf")) == -float("inf")
+
+
+def test_attention_intensity_cap_values():
+    # bf16, d = 128: 2(M + 4d^2)/d FLOP/byte.
+    assert attention_intensity_cap(12 * 2**20, 128, 2) == pytest.approx(99_328)
+    assert attention_intensity_cap(32 * 2**10, 128, 2) == pytest.approx(1_280)
+
+
+def test_attention_shape_matches_flops(model):
+    for w in (decode(model, 2, 4096), prefill(model, 1, 1024)):
+        a = w.attention
+        assert 4 * a.scores * a.head_dim * a.count == w.flops["attention"]
+
+
+def test_attention_term_binds_only_with_small_on_chip(model, device):
+    w = prefill(model, 1, 32768)
+    big = operator_bound(w, device, on_chip_bytes=12 * 2**20).to_dict()["attention"]
+    assert big["terms"]["pebble"] > 0  # nonzero, but far below compute time
+    small = operator_bound(w, device, on_chip_bytes=32 * 2**10)
+    assert small.traffic["attention"]["terms"]["pebble"] > 100 * big["terms"]["pebble"]
+    # Decode: E is tiny, the K/V read is what binds.
+    d = operator_bound(decode(model, 1, 32768), device, on_chip_bytes=12 * 2**20)
+    assert d.traffic["attention"]["binding_term"] == "kv_read"
+
+
+# --- exp resource, TTFT, T_request (plan item 14) ------------------------------
+
+from roofline.bound import request_time, ttft  # noqa: E402
+
+
+def test_exp_resource_is_counted_but_does_not_bind(model):
+    m4 = load_device(M4)
+    b = physical_bound(prefill(model, 1, 32768), m4)
+    w = b.workload
+    assert w.special["exp"] == w.attention.scores * w.attention.count
+    assert "exp" in b.resource_time_s
+    assert b.bottleneck == "compute"
+    assert b.slack["exp"] > 10
+
+
+def test_request_time_adds_prefill_and_decode(model):
+    m4 = load_device(M4)
+    r = request_time(model, m4, 512, 4)
+    steps = [physical_bound(decode(model, 1, 512 + i - 1), m4).time_s for i in (1, 2, 3)]
+    assert r["ttft_s"] == ttft(model, m4, 512)
+    assert r["total_s"] == pytest.approx(r["ttft_s"] + sum(steps))
+    assert request_time(model, m4, 512, 1)["decode_s"] == 0
