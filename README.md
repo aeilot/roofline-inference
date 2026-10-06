@@ -13,8 +13,8 @@ is, and how much relaxing each constraint would gain.
 
 This is not a tool for placing existing kernels on a roofline plot.
 Measurements calibrate the device spec and decompose the engines' gap. The
-full design, derivations and results are in
-[docs/design-notes.md](docs/design-notes.md).
+results report (Chinese) is [docs/report.md](docs/report.md); the full
+design and derivations are in [docs/design-notes.md](docs/design-notes.md).
 
 ## Results so far (Qwen3-0.6B BF16, MacBook Air M4, single stream)
 
@@ -31,7 +31,7 @@ full design, derivations and results are in
 - The fanless machine throttles: the same 32k prefill takes 55.8 s cold and
   70.7 s after ~40 minutes of load.
 
-Burst measurements; see design notes 6.9 for the decomposition and caveats.
+Burst measurements; see [docs/report.md](docs/report.md) and design notes 6.9 for the decomposition and caveats.
 
 ## Approach
 
