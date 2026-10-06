@@ -7,7 +7,7 @@
 在 MacBook Air M4 上单流运行 Qwen3-0.6B(BF16),现有引擎的 decode 已达到理论上界的 87–95%,prefill 只有 31–78%。
 
 - **decode 被内存带宽锁死。** 每生成一个 token 都要把 1.19 GB 权重读一遍,上界为 12.2 ms(上下文 512)到 48.2 ms(32k)。mlx-lm 已经很接近,继续优化代码收益很小;要更快,只能改算法(量化、投机解码等)。
-- **prefill 被算力锁死,还有 20–70% 的空间。** 短 prompt 的损失在小矩阵乘效率低和每块的固定开销,长 prompt 的损失主要在 attention。
+- **prefill 被算力锁死,还有 20–70% 的空间。** 短 prompt 的损失在小矩阵乘效率低和每块的固定开销,长 prompt 的损失主要在 attention。(后续实测见"用实现验证上界"一节:短 prompt 的空间已被实际引擎大部分收回;长 prompt 的空间仍在。)
 - **热状态的影响和软件低效一样大。** 这台机器没有风扇,同一个 32k prompt 的首 token 时间冷时 55.8 s,连续测试约 40 分钟后 70.7 s,相差 27%。
 - **理论部分**:除了标准的上界,本项目自己推导了一个允许融合和重算的 I/O 下界。它在核心级、长 prompt 时比"每个数据只读一次"高约 2 倍,但不改变这台机器上的任何结论。
 
@@ -131,6 +131,15 @@ mlx-lm 在 decode 上比 llama.cpp 高 5–8 个百分点;短 prompt 时 llama.c
 
 - decode 只要约 1k 个并发线程(约 29 KiB 在途数据)就到最好上界的 90%,与 S 基本无关。
 - prefill 到 90% 需要 16k–32k 个并发线程;短 prompt 的小矩阵乘效率低,根源是给不出这么多并行,而不是带宽不够。
+
+## 用实现验证上界(agent-test/v2)
+
+上界是下界,单独看不出它有多紧。为此实现了一个仍在 A 级内的引擎(BF16 权重与 KV,只改实现),与 mlx-lm 的 `generate_step` 做热状态门控的配对对照。细节、数据与局限见 [agent-test/v2/README.md](../agent-test/v2/README.md)。
+
+- **decode 的上界基本是紧的。** v2 达到上界的 95.7–99.3%(mlx-lm 为 92–93%),相对于校准带宽 102.7 GB/s 而言,A 级剩余空间约 1–4%。这印证了"decode 被带宽锁死"。
+- **短 prompt 的诊断得到证实。** 按"小矩阵乘效率低 + 每块固定开销"修改后,TTFT 在 16 / 64 / 256 个 token 时分别快 1.72 / 1.56 / 1.26 倍。
+- **长 prompt 的损失在 attention 的数据路径和降频,不在 softmax。** 在同一个 attention kernel 上去掉 softmax 或 exp,吞吐都不升高;kernel 约为实测 MMA 峰值的 77–80%。持续 60 s 时纯 MMA 不降速,attention 降 12%。因此上界的资源项不需要修改,但长 prompt 的空间需要更好的 attention kernel 才能收回;v2 在 4k–32k 只快 4–8%。
+- **未验证:** 上界作为导航是否比单纯剖析更有用。对照实验设计见 [navigation-experiment.md](navigation-experiment.md)。
 
 ## 局限与下一步
 
