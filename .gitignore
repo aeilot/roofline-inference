@@ -62,3 +62,6 @@ mlruns/
 
 # --- Claude Code (local settings only) ---
 .claude/settings.local.json
+
+# --- Compiled helper (built from agent-test/v2/therm.swift) ---
+agent-test/v2/thermstate

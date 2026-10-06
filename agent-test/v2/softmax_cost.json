@@ -1,0 +1,114 @@
+{
+ "note": "Is the long-prompt prefill gap explained by softmax ALU work missing from the bound?\n\nThree variants of the SAME GQA flash-attention kernel (attention.py), identical\nloads, MMAs, control flow and launch geometry; only the softmax differs:\n  full    : production kernel\n  no_exp  : per-score exp2(s - m) replaced by (s - m); scale/mask/max/sum/rescale kept\n  no_soft : softmax removed; S fed straight into P.V (output meaningless)\nPlus: register-only MMA peak, MLX GEMM, MLX SDPA for reference, and a sustained\n60 s run of the full kernel and of the MMA peak to separate thermal throttling.\nWrites softmax_cost.json.\n",
+ "shapes": [
+  {
+   "qL": 2048,
+   "kL": 2048,
+   "flop": 17188257792,
+   "scores": 33570816,
+   "time_ms": {
+    "full": 6.536,
+    "no_exp": 6.362,
+    "no_soft": 7.208,
+    "mlx_sdpa": 7.037
+   },
+   "tflops": {
+    "full": 2.63,
+    "no_exp": 2.702,
+    "no_soft": 2.384,
+    "mlx_sdpa": 2.443
+   },
+   "softmax_share_of_full": -0.1029,
+   "exp_share_of_full": 0.0266,
+   "ns_per_score_softmax": -0.02004,
+   "thermal_after": 0
+  },
+  {
+   "qL": 2048,
+   "kL": 8192,
+   "flop": 120267472896,
+   "scores": 234897408,
+   "time_ms": {
+    "full": 42.682,
+    "no_exp": 42.583,
+    "no_soft": 46.588,
+    "mlx_sdpa": 47.213
+   },
+   "tflops": {
+    "full": 2.818,
+    "no_exp": 2.824,
+    "no_soft": 2.582,
+    "mlx_sdpa": 2.547
+   },
+   "softmax_share_of_full": -0.0915,
+   "exp_share_of_full": 0.0023,
+   "ns_per_score_softmax": -0.01663,
+   "thermal_after": 0
+  },
+  {
+   "qL": 2048,
+   "kL": 32768,
+   "flop": 532584333312,
+   "scores": 1040203776,
+   "time_ms": {
+    "full": 196.484,
+    "no_exp": 196.801,
+    "no_soft": 215.572,
+    "mlx_sdpa": 211.025
+   },
+   "tflops": {
+    "full": 2.711,
+    "no_exp": 2.706,
+    "no_soft": 2.471,
+    "mlx_sdpa": 2.524
+   },
+   "softmax_share_of_full": -0.0971,
+   "exp_share_of_full": -0.0016,
+   "ns_per_score_softmax": -0.01835,
+   "thermal_after": 0
+  }
+ ],
+ "sustained": {
+  "full_attention_2048x32768": {
+   "window_s": 5,
+   "tflops": [
+    2.645,
+    2.618,
+    2.573,
+    2.458,
+    2.508,
+    2.451,
+    2.463,
+    2.537,
+    2.428,
+    2.393,
+    2.327
+   ],
+   "thermal_after": 1
+  },
+  "mma_peak": {
+   "window_s": 5,
+   "tflops": [
+    3.527,
+    3.539,
+    3.563,
+    3.548,
+    3.559,
+    3.541,
+    3.528,
+    3.538,
+    3.561,
+    3.559,
+    3.556
+   ],
+   "thermal_after": 1
+  }
+ },
+ "no_soft_check_rel_err": 0.0023473442997783422,
+ "mma_peak_tflops": [
+  3.491,
+  3.436,
+  3.527
+ ],
+ "mlx_gemm_tflops": 3.164
+}
