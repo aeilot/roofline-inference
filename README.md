@@ -74,7 +74,7 @@ Requires macOS on Apple Silicon.
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt   # editable install with MLX and pytest
+pip install -r requirements.txt   # editable install with MLX, pytest, matplotlib
 pytest
 ```
 
@@ -93,6 +93,35 @@ GEMM, and bounds each GEMM's traffic with the red-blue pebble game
 
 ```bash
 python -m roofline --bound operator --on-chip-mib 0.25 --model configs/models/qwen3_0.6b.yaml prefill --prompt-len 1024
+```
+
+`--bound hierarchy` builds the operator-level computation graph and bounds the
+traffic across every level of the memory hierarchy (per-core SRAM ↔ L2 ↔
+DRAM, 10 GPU cores) with the multi-level, multi-processor red-blue pebble
+game, both for any fused implementation and under an operator boundary
+(`src/roofline/iobound.py`, design notes 6.8). The roofline figures come
+from the same bounds:
+
+```bash
+python -m roofline --bound hierarchy --model configs/models/qwen3_0.6b.yaml prefill --prompt-len 4096
+python scripts/plot_roofline.py          # results/figures/roofline_*.png
+python benchmarks/hierarchy.py           # calibrate the on-chip levels
+```
+
+Request time (TTFT plus decode of N tokens) under the physical bound:
+
+```bash
+python -m roofline --model configs/models/qwen3_0.6b.yaml request --prompt-len 4096 --gen 512
+```
+
+Per-plan cost model, baselines and the gap between an engine and the bound
+(design notes 6.9):
+
+```bash
+python benchmarks/kernel_chain.py && python scripts/fit_kernel_chain.py   # t0, B_eff, encode, commit, sync
+python benchmarks/compute_shapes.py && python scripts/calibrate.py        # P(shape) -> configs/hardware/*.kernels.json
+python benchmarks/baseline_mlx.py                                         # mlx-lm TTFT and decode
+python benchmarks/ablation_mlx.py && python scripts/gap_report.py         # gap decomposition, results/figures/gap_mlx.png
 ```
 
 ## Background
