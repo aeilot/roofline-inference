@@ -34,6 +34,14 @@ tail -f agent-test/v3/results-quick/log.txt
 
 ## 结果
 
+也可以一条命令跑完两个时段：先跑第一个，在它结束 2 小时后自动跑第二个，等待期间保持唤醒。中断后重新执行会从断点继续，等待时间按第一个时段记录的结束时间计算。
+
+```sh
+agent-test/v3/run_both.sh
+```
+
+间隔可以用环境变量调整，例如 `GAP_HOURS=12 agent-test/v3/run_both.sh`。注意：同一天、间隔几小时的两个时段，复现条件弱于分在两天（见 PLAN.md 第 8 节）。
+
 两个时段都跑完后：
 
 - `results-quick/report.md`：结论表（"更快 / 等价 / 未定 / 作废"）、归因、消融、延续性检验、数据质量；
