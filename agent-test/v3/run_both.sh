@@ -10,6 +10,7 @@ set -euo pipefail
 ROOT=${0:A:h:h:h}
 cd "$ROOT"
 PY=.venv/bin/python
+export HF_HUB_OFFLINE=1     # no network dependency during the unattended run (model is cached)
 GAP_HOURS=${GAP_HOURS:-2}
 PROFILE=quick
 [[ "${1:-}" == "--profile" ]] && PROFILE=$2

@@ -105,6 +105,7 @@ def main():
     gates = {f.stem: json.loads(f.read_text()) for f in sorted(results.glob("gate-s*.json"))}
     sessions = sorted({r["unit"]["session"] for r in runs})
     failed = sorted({e for g in gates.values() for e, v in g["engines"].items() if not v["pass"]})
+    all_runs = runs        # before dropping gate-failed engines (used for the exclusion audit)
     runs = [r for r in runs if r["unit"]["engine"] not in failed or r["unit"]["engine"] in ("E0", "E2")]
     summary = dict(sessions=sessions, primary={}, secondary={}, ablation={}, carryover={},
                    exclusions={}, divergences=dict(total=len(divs), not_near_tie=sum(not d["near_tie"] for d in divs)))
@@ -185,19 +186,64 @@ def main():
     lines.append("")
 
     lines += ["## 延续性检验（进程隔离是否足够）", "",
-              "同一 prompt 上测 E2，比较前一个进程是 E0 还是 E2：比值 = t(前为 E0) / t(前为 E2)。CI 含 1 且偏差 < 2% 视为无可测延续影响。", "",
-              "| 场景 | 指标 | 比值 [95% CI] | 判断 |", "|---|---|---|---|"]
-    for sid in ["ttft64", "ctx4096"]:
-        for metric in (["ttft_s"] + (["decode_s_median"] if sid.startswith("ctx") else [])):
-            lr = paired(runs, "carry", "idle", "E0", "E2", metric, sid, key_extra=lambda u: u.get("role") == "probe")
-            if lr:
+              "同一 prompt 上测目标引擎，比较紧挨着的前一个进程是 E0 还是 E2：比值 = t(前为 E0) / t(前为 E2)。"
+              "两个方向都测（目标 E2、目标 E0）。判断：区间不含 1 → 检出影响；区间落在 [0.98, 1.02] 内 → 无可测影响；"
+              "否则无法排除，并给出本样本量下可检出的最小效应（区间半宽）。", "",
+              "| 目标 | 场景 | 指标 | 比值 [95% CI] | 可检出的最小效应 | 判断 |", "|---|---|---|---|---|---|"]
+    for target in ("E2", "E0"):
+        for sid in ["ttft64", "ctx4096"]:
+            for metric in (["ttft_s"] + (["decode_s_median"] if sid.startswith("ctx") else [])):
+                lr = paired(runs, "carry", "idle", "E0", "E2", metric, sid,
+                            key_extra=lambda u, t=target: u.get("role") == "probe" and u["engine"] == t)
+                if not lr:
+                    continue
                 m, lo, hi, _, _ = boot(lr)
-                ok = lo <= 0 <= hi and abs(m) < MARGIN
                 n = sum(len(v) for v in lr.values())
-                judge = "样本不足" if n < MIN_PAIRS else ("无可测影响" if ok else "存在或无法排除")
-                lines.append(f"| {sid} | {metric} | {fmt_ci(m, lo, hi)} (n={n}) | {judge} |")
-                summary["carryover"][f"{sid}/{metric}"] = dict(gm=math.exp(m), ci=[math.exp(lo), math.exp(hi)], no_effect=ok)
+                mde = (math.exp(hi) - math.exp(lo)) / 2
+                if n < MIN_PAIRS:
+                    judge = "样本不足"
+                elif lo > 0 or hi < 0:
+                    judge = "检出影响"
+                elif lo >= -MARGIN and hi <= MARGIN:
+                    judge = "无可测影响"
+                else:
+                    judge = f"无法排除（小于 ±{mde:.1%} 的影响检不出）"
+                lines.append(f"| {target} | {sid} | {metric} | {fmt_ci(m, lo, hi)} (n={n}) | ±{mde:.1%} | {judge} |")
+                summary["carryover"][f"{target}/{sid}/{metric}"] = dict(
+                    n=n, gm=math.exp(m), ci=[math.exp(lo), math.exp(hi)], mde=mde, verdict=judge)
     lines.append("")
+
+    # Are exclusions independent of the engine? (main phase; permutation test of the chi-square statistic)
+    main_all = [r for r in all_runs + excluded if r["unit"].get("phase") == "main"]
+    engines = sorted({r["unit"]["engine"] for r in main_all})
+    if main_all and excluded:
+        lab = np.array([engines.index(r["unit"]["engine"]) for r in main_all])
+        exc = np.array([bool(r.get("excluded")) for r in main_all])
+
+        def chi2(x):
+            tot = 0.0
+            for e in range(len(engines)):
+                sel = lab == e
+                for val in (True, False):
+                    obs = np.sum(x[sel] == val)
+                    exp_ = sel.sum() * np.mean(x == val)
+                    tot += (obs - exp_) ** 2 / exp_ if exp_ else 0.0
+            return tot
+
+        rng = np.random.default_rng(BOOT_SEED)
+        stat = chi2(exc)
+        perm = np.array([chi2(rng.permutation(exc)) for _ in range(5000)])
+        p_exc = float((1 + np.sum(perm >= stat)) / (1 + len(perm)))
+    else:
+        p_exc = None
+    by_engine = {e: (sum(1 for r in main_all if r["unit"]["engine"] == e and r.get("excluded")),
+                     sum(1 for r in main_all if r["unit"]["engine"] == e)) for e in engines}
+    summary["exclusions_by_engine"] = dict(counts=by_engine, permutation_p=p_exc)
+    lines += ["## 排除记录与引擎的关系（主实验）", "",
+              "| 引擎 | 排除 / 总数 |", "|---|---|"] + [f"| {e} | {a} / {b} |" for e, (a, b) in by_engine.items()] + [
+              "", ("没有排除记录。" if p_exc is None else
+                   f"排除与引擎独立性的置换检验（χ² 统计量，5000 次）：p = {p_exc:.3f}。"
+                   + (" **p < 0.05：排除可能与引擎相关，主结论需要结合排除记录解读。**" if p_exc < 0.05 else "")), ""]
 
     reasons = defaultdict(int)
     for r in excluded:

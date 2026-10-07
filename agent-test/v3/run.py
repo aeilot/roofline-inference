@@ -70,12 +70,13 @@ def schedule(session, smoke, profile):
     P = PROFILES[profile]
     units = []
 
-    def unit(phase, regime, block, sid, engine, role="", prev=""):
+    def unit(phase, regime, block, sid, engine, role="", prev="", target=""):
         L, gen = SCEN[sid]
         kind = "random" if block % 2 == 0 else "text"
-        uid = f"{phase}-{regime}-b{block:02d}-{sid}-{engine}" + (f"-{role}{prev}" if role else "")
+        uid = f"{phase}-{regime}-b{block:02d}-{sid}-{engine}" + (f"-{role}{prev}-for{target}" if role else "")
         return dict(id=uid, phase=phase, regime=regime, block=block, scenario=sid, engine=engine,
-                    role=role, prev=prev, kind=kind, length=L, variant=block, gen=gen, session=session, gate=True)
+                    role=role, prev=prev, target=target, kind=kind, length=L, variant=block, gen=gen,
+                    session=session, gate=True)
 
     def group(us):
         if P["gate"] == "group":
@@ -102,11 +103,12 @@ def schedule(session, smoke, profile):
             continue
         rng = random.Random(f"{SEED}-carry-{b}")
         for sid in CARRYOVER_SCENARIOS:
-            seqs = ["E0", "E2"]
+            # both directions: is E2 affected by a preceding E0, and E0 by a preceding E2?
+            seqs = [(prev, target) for target in ("E2", "E0") for prev in ("E0", "E2")]
             rng.shuffle(seqs)
-            for prev in seqs:     # previous process, then the measured E2 probe
-                units += group([unit("carry", "idle", b, sid, prev, "prev", prev),
-                                unit("carry", "idle", b, sid, "E2", "probe", prev)])
+            for prev, target in seqs:     # previous process, then the measured probe
+                units += group([unit("carry", "idle", b, sid, prev, "prev", prev, target),
+                                unit("carry", "idle", b, sid, target, "probe", prev, target)])
     for b in range(1 if smoke else P["ablation_blocks"]):
         if not in_session(b):
             continue
@@ -206,6 +208,8 @@ def main():
     manifest, mf = preflight(out, session, args)
     manifest["profile"] = args.profile
     (out / "plan.json").write_text(json.dumps(dict(profile=args.profile, **PROFILES[args.profile]), indent=1))
+    # Unattended runs must not depend on the network: use the local HF cache only.
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
     caffeinate = subprocess.Popen(["caffeinate", "-dimsu", "-w", str(os.getpid())])
     try:
         if not manifest.get("probe_ref_ms"):

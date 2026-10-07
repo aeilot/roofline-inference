@@ -23,7 +23,7 @@
 .venv/bin/python agent-test/v3/run.py --session 2
 ```
 
-- 默认使用 **quick 配置**：每个时段 237 次计时，**预计约 2 小时**。与完整方案的区别见 [PLAN.md 第 11 节](PLAN.md#11-quick-配置默认)。
+- 默认使用 **quick 配置**：每个时段 269 次计时，**预计约 2–2.5 小时**。与完整方案的区别见 [PLAN.md 第 11 节](PLAN.md#11-quick-配置默认)。
 - 完整方案（每个时段约 10 小时，绝大部分时间在等冷却）：在命令后加 `--profile full`。两种配置的结果分别保存在 `results-quick/` 和 `results-full/`。
 - **随时可以中断**（Ctrl-C、断电、重启后）：重新执行同一条命令，已完成的单元会跳过，从断点继续。
 - 进度和预计剩余时间写在 `agent-test/v3/results-quick/log.txt`，可以用下面的命令查看：
