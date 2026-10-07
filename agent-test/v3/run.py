@@ -144,7 +144,7 @@ def preflight(out, session, args):
     import mlx.core as mx
     import mlx_lm
     manifest = dict(session=session, started=datetime.now().isoformat(), git_head=git("rev-parse", "HEAD"),
-                    git_dirty=bool(git("status", "--porcelain", "--", "agent-test/v2", "agent-test/v3")),
+                    git_dirty=bool(git("status", "--porcelain", "--untracked-files=no", "--", "agent-test/v2", "agent-test/v3")),
                     files=file_hashes(), mlx=mx.__version__, mlx_lm=mlx_lm.__version__,
                     macos=platform.mac_ver()[0], device=mx.device_info(), on_ac_power=on_ac,
                     python=sys.version, seed=SEED)

@@ -1,0 +1,27 @@
+{
+ "profile": "simple",
+ "pairs": {
+  "ttft16": 12,
+  "ttft64": 12,
+  "ttft256": 8,
+  "ttft1024": 6,
+  "ctx512": 6,
+  "ctx4096": 6,
+  "ctx32768": 6,
+  "req256x256": 6
+ },
+ "regimes": [
+  "idle"
+ ],
+ "gate": "group",
+ "ablation_blocks": 0,
+ "carryover_blocks": 6,
+ "engines": [
+  "E0",
+  "E2"
+ ],
+ "gate_engines": [
+  "E0",
+  "E2"
+ ]
+}

@@ -1,0 +1,30 @@
+{
+ "unit_tests": {
+  "returncode": 0,
+  "tail": "..........................                                               [100%]\n26 passed in 3.31s\n"
+ },
+ "engines": {
+  "E0": {
+   "positions": 1472,
+   "rms_median": 0.04129602387547493,
+   "max_p99": 0.505847692489624,
+   "margin_err_p99": 0.22195053100585938,
+   "top1_mismatch": 20,
+   "max_fp32_regret": 0.12432670593261719,
+   "sign_test_p_worse": 1.0,
+   "pass": true
+  },
+  "E2": {
+   "positions": 1472,
+   "rms_median": 0.04104931466281414,
+   "max_p99": 0.4657503366470337,
+   "margin_err_p99": 0.20711326599121094,
+   "top1_mismatch": 14,
+   "max_fp32_regret": 0.046489715576171875,
+   "sign_test_p_worse": 0.9713134765625,
+   "pass": true
+  }
+ },
+ "e0_margin_err_p99": 0.22195053100585938,
+ "all_pass": true
+}
