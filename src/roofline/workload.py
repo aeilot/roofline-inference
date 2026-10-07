@@ -9,8 +9,10 @@ logits never leave the chip. Elementwise work
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
+from roofline.kvpolicy import KvPolicy
 from roofline.model import ModelSpec
 
 TOKEN_BYTES = 4  # int32 token ids
@@ -117,29 +119,42 @@ def _gemms(m: ModelSpec, rows: int, head_rows: int) -> tuple[Gemm, ...]:
     )
 
 
-def decode(m: ModelSpec, batch: int, context: int) -> Workload:
+def decode(m: ModelSpec, batch: int, context: int, kv: KvPolicy | None = None) -> Workload:
     """One decode step: each of `batch` sequences has `context` cached tokens
-    and generates one new token, which attends over context + 1 positions."""
+    and generates one new token, which attends over context + 1 positions.
+
+    `kv` relaxes the KV cache (kvpolicy.py): the step reads kv.k_read(context)
+    cached keys and kv.v_read(context) cached values per KV head, keeps
+    kv.stored(context) resident, at kv.bits. None is the level-A model (all
+    cached K/V read once, at the model's kv_dtype). The new token's own K/V
+    stay on chip for its attention and are written once."""
     if batch < 1 or context < 0:
         raise ValueError("batch must be >= 1 and context >= 0")
-    attended = context + 1
+    if kv is None:
+        k_read = v_read = stored = context
+        vec_bytes = m.kv_bytes_per_token // 2
+    else:
+        k_read, v_read, stored = kv.k_read(context), kv.v_read(context), kv.stored(context)
+        vec_bytes = kv.bytes_per_vector(m)
+    # Attention computes scores over the keys it reads, plus the new token.
+    keys, values = math.ceil(k_read) + 1, math.ceil(v_read) + 1
     flops = {
         "linear": 2 * m.num_layers * m.layer_linear_params * batch,
-        "attention": 4 * m.num_layers * m.num_heads * m.head_dim * attended * batch,
+        "attention": 2 * m.num_layers * m.num_heads * m.head_dim * (keys + values) * batch,
         "lm_head": 2 * m.vocab_size * m.hidden_size * batch,
     }
     traffic = {
         "weights": _weights_read_bytes(m),
         "embedding_gather": _embedding_gather_bytes(m, batch),
         "token_io": 2 * batch * TOKEN_BYTES,
-        "kv_read": batch * context * m.kv_bytes_per_token,
-        "kv_write": batch * m.kv_bytes_per_token,
+        "kv_read": batch * (k_read + v_read) * vec_bytes,
+        "kv_write": batch * 2 * vec_bytes,
     }
     memory = {
         "weights": m.weight_bytes,
-        "kv_cache": batch * attended * m.kv_bytes_per_token,
+        "kv_cache": batch * (stored + 1) * 2 * vec_bytes,
     }
-    attention = Attention(m.num_heads * attended * batch, m.head_dim, m.num_layers, m.kv_bytes_per_elem)
+    attention = Attention(m.num_heads * keys * batch, m.head_dim, m.num_layers, m.kv_bytes_per_elem)
     return Workload("decode", batch, batch, flops, traffic, memory, _gemms(m, batch, batch), attention)
 
 

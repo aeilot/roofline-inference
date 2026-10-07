@@ -730,6 +730,71 @@ N 为计入乘积总数,P 个处理器各自分段再求和,则对任意 R,流�
 - 按收缩分别分配预算(而不是共用 max)可能把界收紧数倍。
 - 每行前置条件只往上游推了一到两层;推得更深可以让 DRAM 边界也有非平凡的界。
 
+### 6.13 KV 项的结构下界与 KV 存储方案(2026-10-06)
+
+实现:`src/roofline/kvpolicy.py`;`workload.decode(..., kv=policy)`;CLI `decode --kv ... --kv-bits ...`;
+测量 `benchmarks/key_clusters.py`;测试 `tests/test_kvpolicy.py`。
+
+**来源。** 四篇关于流式注意力的下界 / 算法论文:
+
+| 论文 | 结论 | 用处 |
+|---|---|---|
+| Haris & Onak 2025(arXiv 2502.15955) | d = Ω(log n) 时,对每步注意力输出做 (1±η) 近似也要 Ω(nd) bits;99% 的 score 近 0 但位置未知时仍然成立;固定滑窗 W 为 Θ(dW);访问模式预先固定的算法每步要 Ω(nd) 时间,自适应的(检索)可做到 O(d√n) | 主要依据。Qwen3 的 head_dim 128 ≫ ln(32k) ≈ 10.4,处在 Θ(nd) 区间,低维的 e^d 界不相关 |
+| SubGen(Zandieh et al. 2024,arXiv 2402.06082) | keys (m, δ) 可聚类且 ‖q‖ ≤ r 时,内存与每步时间 O(d(mt + s)),t = ε⁻² e^{2δr} log n,s = ε⁻² d log n | 可聚类这一档的形状;需要实测 m 与 δr |
+| Chen et al. 2025(arXiv 2503.11108) | 空间界推广到 tensor attention;存预计算量与现算之间的时间—内存取舍 | 引出下面的"KV 存储方案"检查 |
+| van den Brand et al. 2023(arXiv 2304.02207) | 动态维护注意力(逐元素更新)的摊还更新 / 查询时间,条件最优 | 只有 ω 指数、无常数;对当前 estimator 基本不用,prefix 编辑 / KV 复用时再看 |
+
+**KV 策略(B/C 级的 knob)。** 每个策略给出:每步每个 KV head 读多少个缓存 key(`k_read(n)`)、多少个 value(`v_read(n)`)、
+常驻多少(`stored(n)`)、每元素位数(`bits`)、是否自适应。`full()` 即 A 级(默认,数值与原公式完全一致)。
+
+| 策略 | 依据 | 形状 |
+|---|---|---|
+| `full(bits)` | 无结构:Ω(nd) bits | 随 n 线性;只能靠位数改斜率(B 级)。"不知道稀疏位置"的压缩改变不了增长 |
+| `window(W, sink)` | 固定访问模式:Θ(dW) | n > W + sink 后饱和 |
+| `subgen(m(n), δr, ε)` | SubGen 定理(常数取 1) | 有可证保证;下面实测表明对 Qwen3-0.6B 不适用 |
+| `budget(k, v)` | 经验做法(k-center + 最近 token、H2O 等) | 无保证,质量另测 |
+| `retrieval(k, page)` | 自适应:读页摘要 + top-k | **读的少于存的**:内存仍随 n 线性,每步流量不是 |
+
+空间下界约束的是常驻状态(内存容量),每步流量由时间下界约束:访问模式固定的方法每步仍 Ω(nd),
+所以 `retrieval` 单独建模为 stored > read,避免把省下的内存误当成省下的带宽。
+Ω/O 的常数未知,这些策略只定 KV 项的**形状**,不是数值下限;误差模型是每步输出的 (1±η),与任务质量预算不同,C 级仍需质量模型。
+
+M4 + Qwen3-0.6B,context 32k 的 decode 物理上界(`python -m roofline ... decode --context 32768 --kv ...`):
+
+| 策略 | 上界 | kv_read | KV 常驻 |
+|---|---|---|---|
+| A 级(full, BF16) | 48.2 ms | 3.76 GB | 3.76 GB |
+| `--kv-bits 4` | 20.8 ms | 0.94 GB | 0.94 GB |
+| `--kv window:4096` | 16.2 ms(= 4k 上下文的 A 级上界) | 0.47 GB | 0.47 GB |
+| `--kv retrieval:512`(page 16) | 14.5 ms | 0.29 GB | 3.99 GB |
+| `--kv budget:2048` | 13.9 ms | 0.23 GB | 0.23 GB |
+
+**SubGen 的常数在 32k 以内无效。** ε = 0.1 时 s = 100 · 128 · ln n > n(n ≤ 32k),可证版本保留全部 value,
+不比精确注意力便宜;取 m = 64、δr = 0.5,ε = 0.3 时要 n ≈ 10⁶ 才把 KV 降到 3%,ε = 0.5 时 32k 降到 27%。
+
+**实测:Qwen3-0.6B 的 key 不可聚类(在 softmax 有意义的尺度上)。** `benchmarks/key_clusters.py`:
+prefill 后取每层每个 KV head 的 key(k-norm 与 RoPE 之后),greedy farthest-first(Gonzalez,半径在最优的 2 倍内)求覆盖半径;
+r = 该 KV head 下两个 query head 在所有位置上的 max ‖q‖ · head_dim^-½(缩放并入 r)。
+仓库语料(text)与随机 token(random),n = 1k ~ 8k,centers 最多 n/2:
+
+| | r(224 个 head) | k = n/2 时 δr 最小 / 中位 | k = 64 覆盖 90% key 的 δr 中位 | δr ≤ 2 的 head |
+|---|---|---|---|---|
+| text,n = 1k → 8k | 1.5 ~ 4.3,中位 2.2 | 19.9 → 18.6 / 36.7 → 35.5 | 51 → 60 | 0 |
+| random,n = 1k → 8k | 同上 | 18.1 → 17.1 / 34.6 → 33.4 | 46 → 52 | 0 |
+
+- SubGen 需要 δr = o(log n),实用上 δr ≲ 2(e^{2δr} 进 t);实测即使一半 token 当中心,最好的 head 也是 δr ≈ 17(e^{34}),
+  且不是少数离群点造成的:覆盖 50% / 90% key 的半径与最大半径同量级。
+- 覆盖 90% 的半径随 n 增大(k 固定为 64 时 51 → 60),没有饱和;text 与 random 几乎一样,说明 key 的分布主要由 RoPE 与 k-norm 决定,不是由内容聚类。
+  (SubGen 在 Llama-2 上用 t-SNE 看到的"可聚类"是 2 维投影的直观印象,不等于定理要求的尺度。)
+- 结论:对本模型,**可证的**亚线性 KV 只剩固定访问模式(窗口)与降位数两条;`budget` / `retrieval` 只能作为带质量代价的 C 级 knob。
+
+**A 级的补充检查:KV 存储方案。** "缓存 KV"只是一个实现选择。缓存每层的输入 hidden state、每步重算 K/V,与原模型数学等价
+(每个乘积项至少算一次,9 节的 A 级定义允许重算),所以与实现无关的上界应当对存储方案取最小。
+Qwen3-0.6B 每层每 token:K+V 2048 个元素,hidden 1024 个,存 hidden 让 KV 流量减半;代价是重算 K/V 投影,每省 1 字节多 2048 FLOP,
+而 M4 的机器平衡点约 4.0e12 / 120e9 ≈ 33 FLOP/B,差约 60 倍。32k 时省约 15.7 ms 的读取,多约 0.96 s 的计算。
+只缓存 token id、整段重算更差。`kvpolicy.best_storage_plan` 在 512 / 4k / 32k 上都选 `kv`,所以**上界数值不变**,但这一排除现在有代码和测试。
+省下的字节与多出的 FLOPs 都与 batch × context 成正比,比值 2·hidden·2·kv_dim / ((2·kv_dim − hidden)·字节数) 与 batch 无关;只有机器平衡点接近这个比值的设备(或 hidden ≪ 2·kv_dim 的模型)才需要重新看。
+
 ## 7. 计划
 
 已完成:
@@ -772,6 +837,8 @@ N 为计入乘积总数,P 个处理器各自分段再求和,则对任意 R,流�
 
 17. [ ] sustained 档:连续负载数分钟,测热降频后的带宽与算力。长 prompt prefill(32k 约 41 s)本身就会进入降频区间。
 18. [ ] B 级(量化)、C 级(投机解码、KV 压缩)、batching、多引擎分配、MoE。
+18a. [x] **KV 项的结构下界**(6.13,2026-10-06):KV 策略 knob(full / bits / window / subgen / budget / retrieval)、KV 存储方案检查、Qwen3-0.6B 的 key 可聚类性实测(不可聚类)。
+18b. [ ] **KV knob 的质量表**:`budget` / `retrieval` / 降位数在 v3 prompts 上的输出偏差(与 v3 的 divergence 指标同口径),补成 C 级的"knob → 质量损失"表。
 
 ## 8. 实测结论(2026-10-03 ~ 10-06)
 

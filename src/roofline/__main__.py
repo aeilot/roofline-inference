@@ -9,6 +9,7 @@ from roofline import decode, load_device, load_model, operator_bound, physical_b
 from roofline.bound import request_time
 from roofline.graph import decode_graph, prefill_graph
 from roofline.iobound import io_bound
+from roofline.kvpolicy import parse_policy
 
 
 def main() -> None:
@@ -25,6 +26,10 @@ def main() -> None:
     d = sub.add_parser("decode")
     d.add_argument("--batch", type=int, default=1)
     d.add_argument("--context", type=int, default=0)
+    d.add_argument("--kv", default=None,
+                   help="KV policy (design notes 6.13): full | window:W[:sink] | budget:K[:V] | "
+                        "retrieval:K[:page]; default is level A (full, model dtype)")
+    d.add_argument("--kv-bits", type=float, default=None, help="KV precision in bits per element")
     f = sub.add_parser("prefill")
     f.add_argument("--batch", type=int, default=1)
     f.add_argument("--prompt-len", type=int, required=True)
@@ -46,7 +51,8 @@ def main() -> None:
         print(json.dumps(io_bound(g, device, engine=args.engine, dtype=model.weight_dtype).to_dict(), indent=2))
         return
     if args.phase == "decode":
-        w = decode(model, args.batch, args.context)
+        kv = parse_policy(args.kv, args.kv_bits) if args.kv or args.kv_bits else None
+        w = decode(model, args.batch, args.context, kv)
     else:
         w = prefill(model, args.batch, args.prompt_len)
     if args.bound == "physical":

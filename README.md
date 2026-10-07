@@ -112,6 +112,10 @@ python -m roofline --model configs/models/qwen3_0.6b.yaml request --prompt-len 4
 python -m roofline --bound hierarchy --model configs/models/qwen3_0.6b.yaml prefill --prompt-len 4096
 ```
 
+`decode --kv window:4096` (or `budget:K`, `retrieval:K`, `--kv-bits 4`)
+relaxes the KV cache to a level B/C policy whose shape follows the streaming
+attention lower bounds (design notes 6.13); the default is level A.
+
 `--bound operator` uses the measured on-chip capacity and an operator
 boundary at every GEMM (`--on-chip-mib` relaxes it); `--bound hierarchy`
 bounds the traffic across every level of the memory hierarchy (per-core
@@ -129,6 +133,7 @@ python benchmarks/baseline_mlx.py                                   # mlx-lm TTF
 python benchmarks/ablation_mlx.py && python scripts/gap_report.py   # gap decomposition
 python scripts/plot_roofline.py                                     # roofline figures
 python scripts/plot_vs_capacity.py && python scripts/plot_capacity_parallelism.py
+python benchmarks/key_clusters.py                                   # key clusterability (SubGen premise)
 ```
 
 llama.cpp needs a GGUF; `scripts/convert_qwen3_gguf.py` converts the HF
