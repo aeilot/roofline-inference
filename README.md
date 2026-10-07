@@ -134,6 +134,7 @@ python benchmarks/ablation_mlx.py && python scripts/gap_report.py   # gap decomp
 python scripts/plot_roofline.py                                     # roofline figures
 python scripts/plot_vs_capacity.py && python scripts/plot_capacity_parallelism.py
 python benchmarks/key_clusters.py                                   # key clusterability (SubGen premise)
+python benchmarks/kv_quality.py && python scripts/plot_kv_quality.py # KV policy quality vs time bound
 ```
 
 llama.cpp needs a GGUF; `scripts/convert_qwen3_gguf.py` converts the HF

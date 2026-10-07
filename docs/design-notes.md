@@ -795,6 +795,57 @@ Qwen3-0.6B 每层每 token:K+V 2048 个元素,hidden 1024 个,存 hidden 让 KV 
 只缓存 token id、整段重算更差。`kvpolicy.best_storage_plan` 在 512 / 4k / 32k 上都选 `kv`,所以**上界数值不变**,但这一排除现在有代码和测试。
 省下的字节与多出的 FLOPs 都与 batch × context 成正比,比值 2·hidden·2·kv_dim / ((2·kv_dim − hidden)·字节数) 与 batch 无关;只有机器平衡点接近这个比值的设备(或 hidden ≪ 2·kv_dim 的模型)才需要重新看。
 
+### 6.14 KV knob 的质量表(2026-10-07,计划 18b)
+
+实现:`benchmarks/kv_quality.py`(测量)、`scripts/plot_kv_quality.py`(图与汇总);
+图 `results/figures/kv_quality.png`,数据 `results/figures/kv_quality.json`。
+
+**方法。** 每个 prompt 精确 BF16 prefill P 个 token,然后把真实文本里接下来的 T = 256 个 token 一次喂入(teacher forcing),
+每个策略各跑一遍;策略只改变续写 query 看到的前缀(mask,或前缀 K/V 的量化副本),续写自己的 K/V 保持精确、按因果可见。
+与同一代码路径的精确结果比较,逐位置记录 KL(p_exact ‖ p_policy)、top-1 一致率、真实下一个 token 的 NLL 增量。
+语料为 v3 的仓库文本(44k token),P = 4k / 16k / 32k,每个长度 4 个起点均匀分布、不绕回;每个格子 1024 个位置。
+噪声底线:FP32 与 BF16 精确计算之间的 KL(每个长度 2 个 prompt)。
+自检:保留全部 token 的 mask 与精确结果逐位相同;mlx-lm 自己的 cached attention 与本路径的 p99 KL 为 5~7e-3,与噪声底线同量级。
+
+策略与 estimator 的对应:`bits:b` / `kivi:b` → `full(bits = b + 0.5)`(每 64 个元素一组 16 bit 的 scale 与 bias);
+`window:W` → `window(W, sink=4)`;`snapkv:k`、`kcenter:k` → `budget(k)`(最近 k/4 + 挑选 3k/4,prefill 后固定);
+`quest:k` → `retrieval(k, page=16)`(每个 query head、每个 query 按页 min/max 的分数上界取 top k/16 页)。
+`kivi` 与 `bits` 的区别只在 key:按通道、沿 64 个 token 分组量化(KIVI),value 仍按 token。
+
+**结果(32k;bound 为 M4 上的 decode 物理上界,A 级 48.2 ms):**
+
+| 策略 | bound | p50 KL | p99 KL | top-1 | ΔNLL |
+|---|---|---|---|---|---|
+| 噪声底线(FP32 vs BF16) | – | 3e-5 | 7.1e-3 | 0.990 | – |
+| `bits:8` | 31.0 ms | 1.9e-4 | 1.2e-2 | 0.988 | +0.002 |
+| `bits:6` | 26.5 ms | 1.4e-3 | 0.21 | 0.961 | +0.026 |
+| `kivi:4` | 21.9 ms | 1.7e-3 | 0.16 | 0.954 | +0.013 |
+| `bits:4` | 21.9 ms | 9.7e-3 | 0.82 | 0.914 | +0.073 |
+| `kivi:3` | 19.6 ms | 9.8e-3 | 0.69 | 0.912 | +0.015 |
+| `quest:4096` | 18.5 ms | 6.5e-3 | 0.54 | 0.929 | +0.016 |
+| `window:4096` | 16.2 ms | 9.8e-3 | 2.9 | 0.869 | +0.149 |
+| `snapkv:4096` | 16.2 ms | 3.8e-3 | 3.8 | 0.902 | +0.086 |
+| `kcenter:4096` | 16.2 ms | 1.8e-2 | 4.6 | 0.851 | +0.215 |
+| `quest:1024` | 15.0 ms | 3.6e-2 | 2.4 | 0.836 | +0.183 |
+| `snapkv:1024` | 12.8 ms | 5.7e-2 | 6.5 | 0.782 | +0.389 |
+
+4k 与 16k 的规律相同(完整表见 json)。ΔNLL 的分辨率约 ±0.02(同一格子里出现过 −0.017)。
+
+**结论:**
+
+- **免费的只有 8 bit。** `bits:8` 的 p99 KL 约为噪声底线的 2 倍,top-1 与底线相同;32k 时 48.2 → 31.0 ms。
+- **小代价档:KIVI 4/3 bit 与 Quest 4096。** 同样 4 bit,key 按通道量化把 p99 KL 降低 5~14 倍(Qwen3 的 key 有离群通道);
+  32k 时 `kivi:4` 21.9 ms、`kivi:3` 19.6 ms、`quest:4096` 18.5 ms,ΔNLL 都在 0.01~0.02。2 bit 在所有长度上都不可用。
+- **prefill 后固定选择的 budget 有重尾。** `window` / `snapkv` / `kcenter` 即使保留 4096 个 token,中位 KL 很小,但 p99 KL 有 3~5 nats:
+  个别位置需要的 token 恰好被丢掉。与 6.13 的理论一致:稀疏位置事先未知时,非自适应的选择逃不过 Ω(nd);
+  自适应(按 query 选)的 Quest 在相同时间下明显更好。
+- **k-center(SubGen 的经验做法)是 budget 里最差的**,与 6.13 测得 key 不可聚类一致。
+- **导航含义:** 32k decode 从 48.2 ms 出发,质量几乎不变能到 31 ms(8 bit);接受 ΔNLL ≈ 0.015 能到 18.5~22 ms(Quest 4096 或 KIVI 3/4 bit);
+  再往下(≈ 12~16 ms 的 budget 类)质量代价跳到 ΔNLL 0.1~0.4。两条小代价路线作用在不同维度上(位数 vs 读哪些 token),可以叠加,尚未测。
+
+**局限:** 一个 0.6B 模型、一份仓库语料(中英文文档与 Python 代码,文件间有重复内容,对需要精确回看前文的位置不利于 budget 类方法);
+质量只用 KL / NLL,不是下游任务准确率;续写自己的 256 个 token 不压缩;Quest 按 query head 选页,estimator 的 `retrieval` 按 KV head 计流量,略为乐观。
+
 ## 7. 计划
 
 已完成:
@@ -838,7 +889,8 @@ Qwen3-0.6B 每层每 token:K+V 2048 个元素,hidden 1024 个,存 hidden 让 KV 
 17. [ ] sustained 档:连续负载数分钟,测热降频后的带宽与算力。长 prompt prefill(32k 约 41 s)本身就会进入降频区间。
 18. [ ] B 级(量化)、C 级(投机解码、KV 压缩)、batching、多引擎分配、MoE。
 18a. [x] **KV 项的结构下界**(6.13,2026-10-06):KV 策略 knob(full / bits / window / subgen / budget / retrieval)、KV 存储方案检查、Qwen3-0.6B 的 key 可聚类性实测(不可聚类)。
-18b. [ ] **KV knob 的质量表**:`budget` / `retrieval` / 降位数在 v3 prompts 上的输出偏差(与 v3 的 divergence 指标同口径),补成 C 级的"knob → 质量损失"表。
+18b. [x] **KV knob 的质量表**(6.14,2026-10-07):免费的只有 8 bit;KIVI 4/3 bit 与 Quest 4096 是小代价档;固定选择的 budget 有重尾。
+18c. [ ] **叠加与扩展**:Quest × KIVI 叠加;续写 token 也压缩;换一份无重复的长文本语料与更大的模型复核。
 
 ## 8. 实测结论(2026-10-03 ~ 10-06)
 
