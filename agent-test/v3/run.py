@@ -47,6 +47,12 @@ PROFILES = {
     "quick": dict(pairs={"ttft16": 24, "ttft64": 24, "ttft256": 16, "ttft1024": 8, "ctx512": 8, "ctx4096": 8,
                          "ctx32768": 6, "req256x256": 8, "req4096x128": 8},
                   regimes=["idle"], gate="group", ablation_blocks=4, carryover_blocks=8),
+    # ~2 h for both sessions back to back: only the main question (E2 vs E0 under process
+    # isolation) plus the two-way carryover check; no E1 attribution, no ablations.
+    "simple": dict(pairs={"ttft16": 12, "ttft64": 12, "ttft256": 8, "ttft1024": 6, "ctx512": 6, "ctx4096": 6,
+                          "ctx32768": 6, "req256x256": 6},
+                   regimes=["idle"], gate="group", ablation_blocks=0, carryover_blocks=6,
+                   engines=["E0", "E2"], gate_engines=["E0", "E2"]),
 }
 FROZEN = [V2 / f for f in ["engine.py", "kernels.py", "attention.py", "thermal.py", "check.py",
                            "test_engine.py", "skinny_table.json"]] + sorted(HERE.glob("*.py"))
@@ -95,7 +101,7 @@ def schedule(session, smoke, profile):
             sids = [s for s, n in P["pairs"].items() if b < (1 if smoke else n)]
             rng.shuffle(sids)
             for sid in sids:
-                engines = MAIN_ENGINES[:]
+                engines = list(P.get("engines", MAIN_ENGINES))
                 rng.shuffle(engines)
                 units += group([unit("main", regime, b, sid, e) for e in engines])
     for b in range(1 if smoke else P["carryover_blocks"]):
@@ -196,7 +202,8 @@ def main():
     g.add_argument("--session", type=int, choices=[1, 2])
     g.add_argument("--smoke", action="store_true")
     ap.add_argument("--profile", choices=list(PROFILES), default="quick",
-                    help="quick (default, ~2-3 h per session) or full (PLAN.md sections 5-6, ~10 h per session)")
+                    help="quick (default, ~2-2.5 h per session), simple (~1 h per session, E0 vs E2 only), "
+                         "or full (PLAN.md sections 5-6, ~10 h per session)")
     ap.add_argument("--allow-battery", action="store_true")
     ap.add_argument("--force-unfrozen", action="store_true")
     ap.add_argument("--skip-gate", action="store_true", help="smoke testing only")
@@ -221,12 +228,14 @@ def main():
 
         gate_file = out / f"gate-s{session}.json"
         earlier = sorted(out.glob("gate-s*.json"))
-        if args.profile == "quick" and earlier and not gate_file.exists():
+        if args.profile in ("quick", "simple") and earlier and not gate_file.exists():
             gate_file = earlier[0]      # code is frozen across sessions (checked above): one gate suffices
             log(out, f"reusing {gate_file.name} (quick profile, frozen code)")
         if not gate_file.exists() and not args.skip_gate:
             log(out, "correctness gate (unit tests + FP32 reference for all engines)")
-            subprocess.run([PY, str(HERE / "gate.py"), "--out", str(gate_file)], check=True)
+            subprocess.run([PY, str(HERE / "gate.py"), "--out", str(gate_file)]
+                           + (["--engines", *PROFILES[args.profile]["gate_engines"]]
+                              if "gate_engines" in PROFILES[args.profile] else []), check=True)
         if gate_file.exists():
             gate = json.loads(gate_file.read_text())
             log(out, f"gate: {'PASS' if gate['all_pass'] else 'FAIL'} "
