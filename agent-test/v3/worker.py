@@ -64,6 +64,7 @@ def main():
     p.add_argument("--regime", required=True, choices=["idle", "warm"])
     p.add_argument("--probe-ref", type=float, required=True)
     p.add_argument("--gate-timeout", type=float, default=600)
+    p.add_argument("--no-gate", action="store_true", help="later unit of a gated group: skip the thermal wait")
     p.add_argument("--out", required=True)
     a = p.parse_args()
 
@@ -82,7 +83,10 @@ def main():
     mx.synchronize(adapter.stream)
     mx.synchronize()
 
-    gate = thermal.wait_cool(reference_ms=a.probe_ref, tol=PROBE_TOL, idle=1.0, timeout=a.gate_timeout)
+    if a.no_gate:
+        gate = dict(skipped=True, thermal_state=thermal.thermal_state(), waited_s=0.0)
+    else:
+        gate = thermal.wait_cool(reference_ms=a.probe_ref, tol=PROBE_TOL, idle=1.0, timeout=a.gate_timeout)
     rec["gate"] = gate
     if gate.get("timeout"):
         rec["excluded"] = "gate_timeout"

@@ -29,20 +29,25 @@ ROOT = HERE.parents[1]
 PY = sys.executable
 SEED = 20261006
 
-# id, prompt length, tokens generated, pairs (blocks) in total over both sessions
-SCENARIOS = [
-    ("ttft16", 16, 8, 40), ("ttft64", 64, 8, 40), ("ttft256", 256, 8, 30), ("ttft1024", 1024, 8, 12),
-    ("ctx512", 512, 129, 12), ("ctx4096", 4096, 129, 12), ("ctx16384", 16384, 129, 6),
-    ("ctx32768", 32768, 129, 6),
-    ("req256x256", 256, 256, 12), ("req1024x512", 1024, 512, 12), ("req4096x128", 4096, 128, 12),
-]
+# Scenarios: id -> (prompt length, tokens generated)
+SCEN = {"ttft16": (16, 8), "ttft64": (64, 8), "ttft256": (256, 8), "ttft1024": (1024, 8),
+        "ctx512": (512, 129), "ctx4096": (4096, 129), "ctx16384": (16384, 129), "ctx32768": (32768, 129),
+        "req256x256": (256, 256), "req1024x512": (1024, 512), "req4096x128": (4096, 128)}
 MAIN_ENGINES = ["E0", "E1", "E2"]
-REGIMES = ["idle", "warm"]
 ABLATION_ENGINES = ["E2", "E2-noskinny", "E2-nogemv", "E2-nogqa", "E2-noprefuse"]
 ABLATION_SCENARIOS = ["ttft64", "ttft1024", "ctx512", "ctx4096"]
-ABLATION_BLOCKS = 8
 CARRYOVER_SCENARIOS = ["ttft64", "ctx4096"]
-CARRYOVER_BLOCKS = 12
+# pairs = blocks in total over both sessions. gate: "unit" = thermal gate before every
+# timed request; "group" = once before each (block, scenario) group, whose engines then
+# run back to back in random order (2 s idle each). See PLAN.md section 11.
+PROFILES = {
+    "full": dict(pairs={"ttft16": 40, "ttft64": 40, "ttft256": 30, "ttft1024": 12, "ctx512": 12, "ctx4096": 12,
+                        "ctx16384": 6, "ctx32768": 6, "req256x256": 12, "req1024x512": 12, "req4096x128": 12},
+                 regimes=["idle", "warm"], gate="unit", ablation_blocks=8, carryover_blocks=12),
+    "quick": dict(pairs={"ttft16": 24, "ttft64": 24, "ttft256": 16, "ttft1024": 8, "ctx512": 8, "ctx4096": 8,
+                         "ctx32768": 6, "req256x256": 8, "req4096x128": 8},
+                  regimes=["idle"], gate="group", ablation_blocks=4, carryover_blocks=8),
+}
 FROZEN = [V2 / f for f in ["engine.py", "kernels.py", "attention.py", "thermal.py", "check.py",
                            "test_engine.py", "skinny_table.json"]] + sorted(HERE.glob("*.py"))
 
@@ -58,36 +63,39 @@ def log(out, msg):
         f.write(line + "\n")
 
 
-def scen(sid):
-    return next(s for s in SCENARIOS if s[0] == sid)
-
-
-def schedule(session, smoke):
-    """Deterministic ordered list of units for one session."""
+def schedule(session, smoke, profile):
+    """Deterministic ordered list of units for one session. `gate` marks units preceded by a thermal gate."""
+    P = PROFILES[profile]
     units = []
 
     def unit(phase, regime, block, sid, engine, role="", prev=""):
-        _, L, gen, _ = scen(sid)
+        L, gen = SCEN[sid]
         kind = "random" if block % 2 == 0 else "text"
         uid = f"{phase}-{regime}-b{block:02d}-{sid}-{engine}" + (f"-{role}{prev}" if role else "")
         return dict(id=uid, phase=phase, regime=regime, block=block, scenario=sid, engine=engine,
-                    role=role, prev=prev, kind=kind, length=L, variant=block, gen=gen, session=session)
+                    role=role, prev=prev, kind=kind, length=L, variant=block, gen=gen, session=session, gate=True)
+
+    def group(us):
+        if P["gate"] == "group":
+            for u in us[1:]:
+                u["gate"] = False
+        return us
 
     def in_session(b):
         return smoke or session_of(b) == session
 
-    for regime in REGIMES:
-        for b in range(1 if smoke else 40):
+    for regime in P["regimes"]:
+        for b in range(1 if smoke else max(P["pairs"].values())):
             if not in_session(b):
                 continue
             rng = random.Random(f"{SEED}-main-{regime}-{b}")
-            sids = [s[0] for s in SCENARIOS if b < (1 if smoke else s[3])]
+            sids = [s for s, n in P["pairs"].items() if b < (1 if smoke else n)]
             rng.shuffle(sids)
             for sid in sids:
                 engines = MAIN_ENGINES[:]
                 rng.shuffle(engines)
-                units += [unit("main", regime, b, sid, e) for e in engines]
-    for b in range(1 if smoke else CARRYOVER_BLOCKS):
+                units += group([unit("main", regime, b, sid, e) for e in engines])
+    for b in range(1 if smoke else P["carryover_blocks"]):
         if not in_session(b):
             continue
         rng = random.Random(f"{SEED}-carry-{b}")
@@ -95,9 +103,9 @@ def schedule(session, smoke):
             seqs = ["E0", "E2"]
             rng.shuffle(seqs)
             for prev in seqs:     # previous process, then the measured E2 probe
-                units += [unit("carry", "idle", b, sid, prev, "prev", prev),
-                          unit("carry", "idle", b, sid, "E2", "probe", prev)]
-    for b in range(1 if smoke else ABLATION_BLOCKS):
+                units += group([unit("carry", "idle", b, sid, prev, "prev", prev),
+                                unit("carry", "idle", b, sid, "E2", "probe", prev)])
+    for b in range(1 if smoke else P["ablation_blocks"]):
         if not in_session(b):
             continue
         rng = random.Random(f"{SEED}-abl-{b}")
@@ -106,7 +114,7 @@ def schedule(session, smoke):
         for sid in sids:
             engines = ABLATION_ENGINES[:]
             rng.shuffle(engines)
-            units += [unit("abl", "idle", b, sid, e) for e in engines]
+            units += group([unit("abl", "idle", b, sid, e) for e in engines])
     return units
 
 
@@ -161,7 +169,7 @@ def run_unit(u, out, probe_ref):
         return "skip"
     cmd = [PY, str(HERE / "worker.py"), "--engine", u["engine"], "--kind", u["kind"], "--length", str(u["length"]),
            "--variant", str(u["variant"]), "--gen", str(u["gen"]), "--regime", u["regime"],
-           "--probe-ref", str(probe_ref), "--out", str(dst)]
+           "--probe-ref", str(probe_ref), "--out", str(dst)] + ([] if u["gate"] else ["--no-gate"])
     t0 = time.time()
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
@@ -183,15 +191,19 @@ def main():
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--session", type=int, choices=[1, 2])
     g.add_argument("--smoke", action="store_true")
+    ap.add_argument("--profile", choices=list(PROFILES), default="quick",
+                    help="quick (default, ~2-3 h per session) or full (PLAN.md sections 5-6, ~10 h per session)")
     ap.add_argument("--allow-battery", action="store_true")
     ap.add_argument("--force-unfrozen", action="store_true")
     ap.add_argument("--skip-gate", action="store_true", help="smoke testing only")
     args = ap.parse_args()
     session = 1 if args.smoke else args.session
-    out = HERE / ("results-smoke" if args.smoke else "results")
+    out = HERE / (f"results-smoke-{args.profile}" if args.smoke else f"results-{args.profile}")
     (out / "runs").mkdir(parents=True, exist_ok=True)
 
     manifest, mf = preflight(out, session, args)
+    manifest["profile"] = args.profile
+    (out / "plan.json").write_text(json.dumps(dict(profile=args.profile, **PROFILES[args.profile]), indent=1))
     caffeinate = subprocess.Popen(["caffeinate", "-dimsu", "-w", str(os.getpid())])
     try:
         if not manifest.get("probe_ref_ms"):
@@ -202,6 +214,10 @@ def main():
                  f"{' (dirty)' if manifest['git_dirty'] else ''}")
 
         gate_file = out / f"gate-s{session}.json"
+        earlier = sorted(out.glob("gate-s*.json"))
+        if args.profile == "quick" and earlier and not gate_file.exists():
+            gate_file = earlier[0]      # code is frozen across sessions (checked above): one gate suffices
+            log(out, f"reusing {gate_file.name} (quick profile, frozen code)")
         if not gate_file.exists() and not args.skip_gate:
             log(out, "correctness gate (unit tests + FP32 reference for all engines)")
             subprocess.run([PY, str(HERE / "gate.py"), "--out", str(gate_file)], check=True)
@@ -212,7 +228,7 @@ def main():
             if not gate["engines"].get("E2", {}).get("pass") or gate["unit_tests"]["returncode"]:
                 sys.exit("E2 failed the correctness gate; timing results would be meaningless. Stopping.")
 
-        units = schedule(session, args.smoke)
+        units = schedule(session, args.smoke, args.profile)
         done = sum((out / "runs" / f"s{session}-{u['id']}.json").exists() for u in units)
         log(out, f"{len(units)} units in this session, {done} already done")
         t_start, n_new = time.time(), 0

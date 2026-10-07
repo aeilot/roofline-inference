@@ -98,6 +98,8 @@ def main():
     a = ap.parse_args()
     results = Path(a.results)
     runs, excluded = load(results)
+    plan = json.loads((results / "plan.json").read_text()) if (results / "plan.json").exists() else {}
+    planned = plan.get("pairs", PLANNED)
     divs = json.loads((results / "divergence_records.json").read_text()) if (results / "divergence_records.json").exists() else []
     manifests = [json.loads(f.read_text()) for f in sorted(results.glob("manifest-s*.json"))]
     gates = {f.stem: json.loads(f.read_text()) for f in sorted(results.glob("gate-s*.json"))}
@@ -108,7 +110,7 @@ def main():
                    exclusions={}, divergences=dict(total=len(divs), not_near_tie=sum(not d["near_tie"] for d in divs)))
 
     lines = ["# v3 验证结果", "",
-             f"时段：{sessions}；有效计时 {len(runs)} 次，排除 {len(excluded)} 次。由 analyze.py 自动生成（判据见 PLAN.md 第 1、7 节）。", ""]
+             f"方案：{plan.get('profile', 'full')}；时段：{sessions}；有效计时 {len(runs)} 次，排除 {len(excluded)} 次。由 analyze.py 自动生成（判据见 PLAN.md 第 1、7 节）。", ""]
     if failed:
         lines += [f"> 未通过正确性门槛、已从分析中剔除的引擎：{failed}" + ("（E0/E2 不可剔除，结论无效）" if {"E0", "E2"} & set(failed) else ""), ""]
     if len(sessions) < 2:
@@ -144,7 +146,7 @@ def main():
                 else:
                     verdict = "未定"
                 per_s = ", ".join(f"{k} {math.exp(v):.3f}" for k, v in sorted(per.items()))
-                lines.append(f"| {fam} | {sid} | {n} ({PLANNED[sid]}) | {fmt_ci(m, lo, hi)} | {per_s} | {padj:.4f} | {verdict} |")
+                lines.append(f"| {fam} | {sid} | {n} ({planned.get(sid, "—")}) | {fmt_ci(m, lo, hi)} | {per_s} | {padj:.4f} | {verdict} |")
                 summary["primary" if regime == "idle" else "secondary"].setdefault(regime, {})[f"{fam}/{sid}"] = dict(
                     n=n, gm=math.exp(m), ci=[math.exp(lo), math.exp(hi)], per_session={k: math.exp(v) for k, v in per.items()},
                     p_holm=padj, verdict=verdict)
@@ -191,7 +193,9 @@ def main():
             if lr:
                 m, lo, hi, _, _ = boot(lr)
                 ok = lo <= 0 <= hi and abs(m) < MARGIN
-                lines.append(f"| {sid} | {metric} | {fmt_ci(m, lo, hi)} | {'无可测影响' if ok else '存在或无法排除'} |")
+                n = sum(len(v) for v in lr.values())
+                judge = "样本不足" if n < MIN_PAIRS else ("无可测影响" if ok else "存在或无法排除")
+                lines.append(f"| {sid} | {metric} | {fmt_ci(m, lo, hi)} (n={n}) | {judge} |")
                 summary["carryover"][f"{sid}/{metric}"] = dict(gm=math.exp(m), ci=[math.exp(lo), math.exp(hi)], no_effect=ok)
     lines.append("")
 

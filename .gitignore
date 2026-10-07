@@ -67,4 +67,4 @@ mlruns/
 agent-test/v2/thermstate
 
 # --- v3 smoke-test output (pipeline check, not evidence) ---
-agent-test/v3/results-smoke/
+agent-test/v3/results-smoke*/

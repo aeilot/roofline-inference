@@ -23,24 +23,25 @@
 .venv/bin/python agent-test/v3/run.py --session 2
 ```
 
-- 每个时段 710 次计时，再加上 gate 与分叉判定，**预计约 10 小时**（按冒烟测试外推）。其中约四分之三的时间在等机器从 thermalState=1 冷却回 0，这是协议有意付出的代价。建议放在夜里跑。
+- 默认使用 **quick 配置**：每个时段 237 次计时，**预计约 2 小时**。与完整方案的区别见 [PLAN.md 第 11 节](PLAN.md#11-quick-配置默认)。
+- 完整方案（每个时段约 10 小时，绝大部分时间在等冷却）：在命令后加 `--profile full`。两种配置的结果分别保存在 `results-quick/` 和 `results-full/`。
 - **随时可以中断**（Ctrl-C、断电、重启后）：重新执行同一条命令，已完成的单元会跳过，从断点继续。
-- 进度和预计剩余时间写在 `agent-test/v3/results/log.txt`，可以用下面的命令查看：
+- 进度和预计剩余时间写在 `agent-test/v3/results-quick/log.txt`，可以用下面的命令查看：
 
 ```sh
-tail -f agent-test/v3/results/log.txt
+tail -f agent-test/v3/results-quick/log.txt
 ```
 
 ## 结果
 
 两个时段都跑完后：
 
-- `results/report.md`：结论表（"更快 / 等价 / 未定 / 作废"）、归因、消融、延续性检验、数据质量；
-- `results/summary.json`：同样的内容，机器可读；
-- `results/runs/*.json`：每一次计时的原始记录（包括被排除的）；
-- `results/manifest-s*.json`：环境、代码哈希、探针基准；
-- `results/gate-s*.json`：正确性门槛的结果；
-- `results/divergence_records.json`：每一处生成序列分叉及其 FP32 判定。
+- `results-quick/report.md`：结论表（"更快 / 等价 / 未定 / 作废"）、归因、消融、延续性检验、数据质量；
+- `results-quick/summary.json`：同样的内容，机器可读；
+- `results-quick/runs/*.json`：每一次计时的原始记录（包括被排除的）；
+- `results-quick/manifest-s*.json`：环境、代码哈希、探针基准；
+- `results-quick/gate-s*.json`：正确性门槛的结果；
+- `results-quick/divergence_records.json`：每一处生成序列分叉及其 FP32 判定。
 
 只跑完一个时段时，也会生成报告，但所有"更快"都会标为"单时段，暂定"。
 
@@ -58,7 +59,7 @@ run.py（父进程，不加载模型）
  └─ analyze.py：事先冻结的分析，生成 report.md 与 summary.json
 ```
 
-冒烟测试（约 30–40 分钟，输出到 `results-smoke/`，不进入正式分析）：
+冒烟测试（约 30–40 分钟，输出到 `results-smoke-quick/`，不进入正式分析）：
 
 ```sh
 .venv/bin/python agent-test/v3/run.py --smoke
