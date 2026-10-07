@@ -1,9 +1,13 @@
-"""Fixed prompt sets for v3: random tokens and real text from files in this repo.
+"""Fixed prompt sets for v3: random tokens and real text from a frozen corpus.
 
 A prompt is identified by (kind, length, variant). Random prompts use a seed
 derived from (length, variant); text prompts cycle through a fixed corpus
 (Chinese report, English README, Python source) starting at an offset derived
 from the variant, so different pairs see different content.
+
+The corpus is a snapshot (corpus/, files as of commit 8094be0) rather than the
+live docs: editing the docs must not change the prompts of v3 or of
+benchmarks/kv_quality.py, which records the same corpus_sha256.
 """
 from __future__ import annotations
 
@@ -13,8 +17,8 @@ from functools import lru_cache
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-CORPUS_FILES = ["docs/report.md", "README.md", "docs/design-notes.md", "agent-test/v2/engine.py",
-                "agent-test/v2/kernels.py", "agent-test/v2/README.md"]
+CORPUS_DIR = Path(__file__).resolve().parent / "corpus"
+CORPUS_FILES = sorted((p for p in CORPUS_DIR.iterdir() if p.name[0].isdigit()), key=lambda p: int(p.name.split("-")[0]))
 
 
 @lru_cache(maxsize=1)
@@ -27,14 +31,14 @@ def _tokenizer():
 @lru_cache(maxsize=1)
 def corpus_tokens() -> tuple[int, ...]:
     tok = _tokenizer()
-    text = "\n\n".join((ROOT / f).read_text() for f in CORPUS_FILES)
+    text = "\n\n".join(f.read_text() for f in CORPUS_FILES)
     return tuple(tok.encode(text))
 
 
 def corpus_sha256() -> str:
     h = hashlib.sha256()
     for f in CORPUS_FILES:
-        h.update((ROOT / f).read_bytes())
+        h.update(f.read_bytes())
     return h.hexdigest()
 
 

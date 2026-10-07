@@ -50,8 +50,8 @@ PROFILES = {
 }
 FROZEN = [V2 / f for f in ["engine.py", "kernels.py", "attention.py", "thermal.py", "check.py",
                            "test_engine.py", "skinny_table.json"]] + sorted(HERE.glob("*.py"))
-# text-prompt corpus: if it changed between sessions, the same prompt id would mean different content
-FROZEN += [ROOT / f for f in ["docs/report.md", "README.md", "docs/design-notes.md", "agent-test/v2/README.md"]]
+# text-prompt corpus snapshot: if it changed between sessions, the same prompt id would mean different content
+FROZEN += sorted((HERE / "corpus").iterdir())
 
 
 def session_of(block):

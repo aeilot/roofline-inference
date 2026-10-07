@@ -1,0 +1,3 @@
+Snapshot of the v3 text-prompt corpus: these 6 files as of commit 8094be0, in this order.
+It is the corpus behind results/raw/kv_quality.json (corpus_sha256 61128177...) and the v3 text prompts.
+Frozen so that editing the live docs changes neither experiment.
