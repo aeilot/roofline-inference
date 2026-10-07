@@ -10,7 +10,7 @@ logits never leave the chip. Elementwise work
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from roofline.kvpolicy import KvPolicy
 from roofline.model import ModelSpec
@@ -48,6 +48,11 @@ class Attention:
     head_dim: int
     count: int
     elem_bytes: int
+    final_scores: int | None = None  # final layer after removing unused query rows
+
+    @property
+    def total_scores(self) -> int:
+        return self.scores * self.count if self.final_scores is None else self.scores * (self.count - 1) + self.final_scores
 
 
 @dataclass(frozen=True)
@@ -60,13 +65,14 @@ class Workload:
     memory: dict[str, float]  # resident footprint
     gemms: tuple[Gemm, ...] = ()
     attention: Attention | None = None
+    computation_scope: str = "full_product_graph"
 
     @property
     def special(self) -> dict[str, float]:
         """Special-function counts: one exp per attention score."""
         if self.attention is None:
             return {}
-        return {"exp": self.attention.scores * self.attention.count}
+        return {"exp": self.attention.total_scores}
 
     @property
     def total_flops(self) -> float:
@@ -158,9 +164,11 @@ def decode(m: ModelSpec, batch: int, context: int, kv: KvPolicy | None = None) -
     return Workload("decode", batch, batch, flops, traffic, memory, _gemms(m, batch, batch), attention)
 
 
-def prefill(m: ModelSpec, batch: int, prompt_len: int) -> Workload:
+def prefill(m: ModelSpec, batch: int, prompt_len: int, *, prune_final: bool = True) -> Workload:
     """Prefill `batch` prompts of `prompt_len` tokens with causal attention.
-    Logits are only needed for the last position of each prompt."""
+    Logits are only needed for the last position of each prompt. By default,
+    remove unused final-layer Q, attention, O and MLP rows; K/V for every
+    position remain outputs. prune_final=False reproduces the historical graph."""
     if batch < 1 or prompt_len < 1:
         raise ValueError("batch and prompt_len must be >= 1")
     p = prompt_len
@@ -171,6 +179,11 @@ def prefill(m: ModelSpec, batch: int, prompt_len: int) -> Workload:
         "attention": 4 * m.num_layers * m.num_heads * m.head_dim * causal_pairs * batch,
         "lm_head": 2 * m.vocab_size * m.hidden_size * batch,
     }
+    final_scores = m.num_heads * batch * p if prune_final else None
+    if prune_final:
+        dead_params = 2 * m.hidden_size * m.q_dim + 3 * m.hidden_size * m.intermediate_size
+        flops["linear"] -= 2 * dead_params * batch * (p - 1)
+        flops["attention"] = 4 * m.head_dim * (m.num_heads * causal_pairs * batch * (m.num_layers - 1) + final_scores)
     traffic = {
         "weights": _weights_read_bytes(m),
         "embedding_gather": _embedding_gather_bytes(m, batch * p),
@@ -182,7 +195,17 @@ def prefill(m: ModelSpec, batch: int, prompt_len: int) -> Workload:
         "weights": m.weight_bytes,
         "kv_cache": batch * p * m.kv_bytes_per_token,
     }
-    attention = Attention(m.num_heads * causal_pairs * batch, m.head_dim, m.num_layers, m.kv_bytes_per_elem)
-    return Workload(
-        "prefill", batch, batch * p, flops, traffic, memory, _gemms(m, batch * p, batch), attention
-    )
+    attention = Attention(m.num_heads * causal_pairs * batch, m.head_dim, m.num_layers, m.kv_bytes_per_elem, final_scores)
+    gemms = _gemms(m, batch * p, batch)
+    if prune_final:
+        gemms = tuple(replace(g, count=m.num_layers - 1) for g in gemms[:-1] if m.num_layers > 1) + (
+            Gemm("final_q", batch, m.q_dim, m.hidden_size, 1, m.weight_bytes_per_param),
+            Gemm("final_kv", batch * p, 2 * m.kv_dim, m.hidden_size, 1, m.weight_bytes_per_param,
+                 persistent_out_bytes=batch * p * m.kv_bytes_per_token // m.num_layers),
+            Gemm("final_o", batch, m.hidden_size, m.q_dim, 1, m.weight_bytes_per_param),
+            Gemm("final_gate_up", batch, 2 * m.intermediate_size, m.hidden_size, 1, m.weight_bytes_per_param),
+            Gemm("final_down", batch, m.hidden_size, m.intermediate_size, 1, m.weight_bytes_per_param),
+            gemms[-1],
+        )
+    return Workload("prefill", batch, batch * p, flops, traffic, memory, gemms, attention,
+                    "useful_product_graph" if prune_final else "full_product_graph")

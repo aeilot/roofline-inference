@@ -113,7 +113,7 @@ def decode_gap(m: ModelSpec, device: Device, cal: Calibration, row: dict, struct
     ctx = row["ctx"]
     w = decode(m, 1, ctx)
     B = device.bandwidth(engine)
-    phys = physical_bound(w, device, engine, m.weight_dtype).time_s
+    phys = physical_bound(w, device, engine, m.weight_dtype, initial_resident_bytes=0).time_s
     matmul_w = (m.num_layers * m.layer_linear_params + m.vocab_size * m.hidden_size) * m.weight_bytes_per_param
     kv = w.bytes["kv_read"]
     rest = w.total_bytes - matmul_w - kv
@@ -139,7 +139,7 @@ def decode_gap(m: ModelSpec, device: Device, cal: Calibration, row: dict, struct
         "engine": _piece(eng, 0.0, engine_model, cpu_per_token=cpu, gpu_model=gpu),
     }
     return {"phase": "decode", "ctx": ctx, "phys_s": phys, "measured_s": row["generate_s"],
-            "model_s": gpu + engine_model, "kernels": kinds, "pieces": pieces}
+            "model_s": gpu + engine_model, "kernels": kinds, "pieces": pieces, "interpretation": "ordered_ablation_marginal_effects"}
 
 
 def prefill_chunks(L: int, chunk: int = 2048) -> list[tuple[int, int]]:
@@ -152,8 +152,10 @@ def prefill_gap(m: ModelSpec, device: Device, cal: Calibration, row: dict, struc
                 chunk: int = 2048, engine: str = "gpu") -> dict:
     """Decomposition of time to first token for a prompt of row['L'] tokens."""
     L = row["L"]
-    w = prefill(m, 1, L)
-    pb = physical_bound(w, device, engine, m.weight_dtype)
+    # Historical ablations execute the full product graph. Do not silently
+    # attribute dead-row elimination to a kernel loss in this decomposition.
+    w = prefill(m, 1, L, prune_final=False)
+    pb = physical_bound(w, device, engine, m.weight_dtype, initial_resident_bytes=0)
     P = device.engine(engine).peak_flops(m.weight_dtype).effective
     B = device.bandwidth(engine)
     chunks = prefill_chunks(L, chunk)
@@ -184,7 +186,8 @@ def prefill_gap(m: ModelSpec, device: Device, cal: Calibration, row: dict, struc
     }
     return {"phase": "prefill", "L": L, "phys_s": pb.time_s, "measured_s": row["generate_s"],
             "model_s": gemm_model + attn_model + small_model + engine_model,
-            "ideal_overlap_s": gemm_ideal + attn_ideal - pb.time_s, "pieces": pieces}
+            "ideal_overlap_s": gemm_ideal + attn_ideal - pb.time_s, "pieces": pieces,
+            "interpretation": "ordered_ablation_marginal_effects", "computation_scope": w.computation_scope}
 
 
 def decode_plan_time(cal: Calibration, n_gemm: int, n_attention: int, n_small: int, weight_bytes: float,

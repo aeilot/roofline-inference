@@ -21,7 +21,7 @@ memory:
       LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE. Measured 2026-10-04
       with benchmarks/contention.py (3 s read windows, best of 3): GPU alone
       95.0, CPU alone 46-54, CPU + GPU 89.6-92.0 GB/s. Running both never beats
-      the GPU alone, so the GPU alone reaches the DRAM ceiling; `measured` is
+      the GPU alone, so these tests did not show a higher combined throughput; this does not certify a DRAM ceiling; `measured` is
       set to the GPU-alone read bandwidth from benchmarks/bandwidth.py.
   capacity:
     value: 25769803776
@@ -40,8 +40,8 @@ memory:
       the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with
       benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up
       to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB.
-      `measured` takes the upper edge, rounded up to 12 MiB: a larger M only
-      weakens the lower bound, so it stays valid.
+      `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not
+      a certified upper bound on physical capacity, so validity is conditional.
 
 engines:
   gpu:
@@ -98,8 +98,8 @@ engines:
 # Memory hierarchy for the multi-level, multi-processor pebble bound (design
 # notes 6.8), from the cores outward. Each level: capacity per instance, number
 # of instances (private per core or shared), and the aggregate bandwidth of the
-# boundary between this level and the next slower one. Capacities must be
-# upper estimates: a larger capacity only weakens the lower bound.
+# boundary between this level and the next slower one. Capacities must be true upper limits for a certified bound; these are
+# unverified upper estimates. A larger assumed capacity weakens the bound.
 hierarchy:
   - name: core
     instances: 10

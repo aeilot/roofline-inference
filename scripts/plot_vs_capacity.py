@@ -1,11 +1,11 @@
-"""Performance bound vs fast-memory capacity S (design notes 6.10).
+"""Resource reference vs fast-memory capacity S (design notes 6.10).
 
 Arithmetic intensity is not an input here: for each step's computation graph,
-Q_min(S) (src/roofline/iobound.py) gives the least traffic across a boundary
+Q_lower(S) (src/roofline/iobound.py) bounds the least traffic across a boundary
 with S bytes of fast memory, so
 
-    AI_max(S)   = FLOPs / Q_min(S)
-    perf(S)    <= FLOPs / max(FLOPs / P_peak, Q_min(S) / B)
+    AI_cap(S)   = FLOPs / Q_lower(S)
+    perf(S)    <= FLOPs / max(FLOPs / P_peak, Q_lower(S) / B)
 
 Two-level model: fast memory of S bytes (one processor) in front of DRAM at
 the measured bandwidth. Solid lines: fused bound (any level-A implementation;
@@ -78,14 +78,14 @@ def main() -> None:
         data.append({"label": label, "flops": g.total_flops, "fused": q[:, 0], "operator": q[:, 1]})
 
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(13, 5.4), facecolor=SURFACE)
-    style(a1, "arithmetic-intensity cap  FLOPs / Q_min(S)  (FLOP/byte)", "AI is derived: FLOPs / Q_min(S)")
-    style(a2, "performance bound (FLOP/s)", f"Performance bound, DRAM {B / 1e9:.1f} GB/s")
+    style(a1, "arithmetic-intensity cap  FLOPs / Q_lower(S)  (FLOP/byte)", "AI is derived: FLOPs / Q_lower(S)")
+    style(a2, "calibrated resource reference (FLOP/s)", f"Resource reference, DRAM {B / 1e9:.1f} GB/s")
 
     for (label, color), d in zip(SERIES, data):
         for kind, dash in (("fused", "-"), ("operator", (0, (4, 2)))):
             q = d[kind]
-            # Q_min = 0 once S holds the whole working set (no DRAM traffic in
-            # steady state): AI is unbounded there, drawn at the clip line.
+            # This is a traffic lower bound, not the minimum attained by a schedule.
+            # Required new-KV/token writes remain when all inputs fit.
             ai = np.where(q > 0, d["flops"] / np.maximum(q, 1.0), AI_CLIP)
             perf = d["flops"] / np.maximum(d["flops"] / peak, q / B)
             a1.plot(S, np.minimum(ai, AI_CLIP), color=color, linestyle=dash, linewidth=1.8)
@@ -96,13 +96,13 @@ def main() -> None:
         a1.annotate(label, (S[0] * 1.15, ai0 * dy), color=INK2, fontsize=8, va="top" if dy < 1 else "baseline")
 
     a1.axhline(ridge, color=INK, linewidth=1.1)
-    a1.annotate(f"machine balance {ridge:.0f} FLOP/B\nabove: compute-bound", (2**27, ridge * 1.25),
+    a1.annotate(f"balance {ridge:.0f} FLOP/B\nhigher AI: I/O bound nonbinding", (2**16, ridge * 1.25),
                 color=INK2, fontsize=8)
     a1.set_ylim(0.5, AI_CLIP * 1.6)
     a1.axhspan(AI_CLIP, AI_CLIP * 1.6, color=GRID, zorder=0)
-    a1.annotate("unbounded: S holds all weights + KV", (2**22, AI_CLIP * 1.12), color=INK2, fontsize=7.5)
+    a1.annotate("clipped AI; compulsory output writes remain", (2**22, AI_CLIP * 1.12), color=INK2, fontsize=7.5)
     a2.axhline(peak, color=INK, linewidth=1.1)
-    a2.annotate(f"BF16 peak {peak / 1e12:.2f} TFLOP/s; prefill (fused) sits here at every S",
+    a2.annotate(f"calibrated BF16 {peak / 1e12:.2f} TFLOP/s; attainability not established",
                 (2**16, peak * 1.06), color=INK2, fontsize=8)
     for ax in (a1, a2):
         for s, name in LEVELS:
@@ -113,22 +113,22 @@ def main() -> None:
 
     a2.legend(handles=[
         *[Line2D([], [], color=c, linewidth=1.8, label=l) for l, c in SERIES],
-        Line2D([], [], color=MUTED, linewidth=1.8, label="fused (any implementation, proven)"),
+        Line2D([], [], color=MUTED, linewidth=1.8, label="fused (compulsory, explicit KV)"),
         Line2D([], [], color=MUTED, linewidth=1.8, linestyle=(0, (4, 2)), label="operator boundary"),
     ], loc="lower right", fontsize=8, frameon=False, labelcolor=INK2)
-    fig.suptitle("Qwen3-0.6B BF16 on MacBook Air M4: performance bound as a function of fast-memory capacity "
+    fig.suptitle("Qwen3-0.6B BF16 on MacBook Air M4: resource reference as a function of fast-memory capacity "
                  "(two-level, one processor)", color=INK, fontsize=11.5, x=0.01, ha="left")
     fig.tight_layout()
     out = Path("results/figures")
     fig.savefig(out / "perf_vs_capacity.png", dpi=160, facecolor=SURFACE)
 
-    record = {"peak_flops": peak, "bandwidth": B, "S_bytes": S.tolist(),
+    record = {"interpretation": "calibrated_reference_not_attained_performance", "experimental_fused_applied": False, "peak_flops": peak, "bandwidth": B, "S_bytes": S.tolist(),
               "series": [{"label": d["label"], "flops": d["flops"], "fused_bytes": d["fused"].tolist(),
                           "operator_bytes": d["operator"].tolist()} for d in data]}
     (out / "perf_vs_capacity.json").write_text(json.dumps(record))
 
     # Where each curve crosses the machine balance (becomes compute-bound).
-    print(f"{'step':<16}{'bound':<10}{'compute-bound once S >=':>26}")
+    print(f"{'step':<16}{'bound':<10}{'I/O bound below compute at S >=':>26}")
     for d in data:
         for kind in ("fused", "operator"):
             ai = d["flops"] / np.maximum(d[kind], 1.0)

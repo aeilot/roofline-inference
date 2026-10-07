@@ -38,6 +38,10 @@ def main() -> None:
     r.add_argument("--gen", type=int, required=True)
     args = p.parse_args()
 
+    if args.phase == "decode" and args.bound != "physical" and (args.kv is not None or args.kv_bits is not None):
+        p.error("KV policies are supported only by --bound physical; operator/hierarchy graphs do not model them")
+    if args.phase == "request" and args.bound != "physical":
+        p.error("request currently supports only --bound physical")
     model = load_model(args.model)
     device = load_device(args.device)
     if args.phase == "request":

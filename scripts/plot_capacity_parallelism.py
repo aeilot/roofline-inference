@@ -1,9 +1,9 @@
-"""Performance bound over (fast-memory capacity S, available parallelism T)
+"""Resource reference over (fast-memory capacity S, available parallelism T)
 (design notes 6.11, plan 16d).
 
-    perf(S, T) <= FLOPs / max( FLOPs / P(T),  Q_min(S) / B(T) )
+    perf(S, T) <= FLOPs / max( FLOPs / P(T),  Q_lower(S) / B(T) )
 
-Q_min(S): least traffic for the step's graph with S bytes of fast memory
+Q_lower(S): lower bound on traffic for the step's graph with S bytes of fast memory
 (src/roofline/iobound.py, operator-boundary bound). B(T) and P(T): measured
 read bandwidth and FMA throughput with T concurrent threads
 (benchmarks/concurrency.py; 4 loads in flight per thread). Also fits
@@ -65,7 +65,7 @@ def main() -> None:
     model = load_model("configs/models/qwen3_0.6b.yaml")
     cases = [("decode ctx 4k", decode_graph(model, 1, 4096)), ("prefill L 4k", prefill_graph(model, 1, 4096))]
     # Up to 256 MiB, far beyond the on-chip levels: from ~1 GiB the weights start to fit and
-    # decode needs no DRAM traffic, which perf_vs_capacity.png already shows.
+    # input traffic is reduced; mandatory output writes remain.
     S = 2.0 ** np.arange(10, 28.01, 0.25)
 
     fig, axes = plt.subplots(1, 3, figsize=(16, 5.2), facecolor=SURFACE,
@@ -101,13 +101,13 @@ def main() -> None:
         ax.set_ylabel("concurrent threads T (4 loads in flight each)", color=INK2, fontsize=10)
         t_best = F / best
         unit = f"{t_best * 1e3:.1f} ms" if t_best < 1 else f"{t_best:.2f} s"
-        ax.set_title(f"{label}: bound / best bound ({unit}, {best / peak:.0%} of peak)",
+        ax.set_title(f"{label}: reference / best reference ({unit}, {best / peak:.0%} of peak)",
                      color=INK, fontsize=10.5, loc="left")
         out_cases.append({"label": label, "flops": F, "best_time_s": t_best, "Q_bytes": Q.tolist(),
                           "fraction_of_best": frac.tolist()})
     cb = fig.colorbar(mesh, ax=axes[1], fraction=0.05, pad=0.03)
     cb.ax.tick_params(colors=INK2, labelsize=8)
-    cb.set_label("bound / best bound", color=INK2, fontsize=9)
+    cb.set_label("reference / best reference", color=INK2, fontsize=9)
 
     # Right panel: the two roofs vs parallelism.
     ax = axes[2]
@@ -140,11 +140,12 @@ def main() -> None:
     ax.set_title("Roofs vs parallelism (measured)", color=INK, fontsize=11, loc="left")
     ax.legend(loc="lower right", fontsize=7.5, frameon=False, labelcolor=INK2)
 
-    fig.suptitle("Qwen3-0.6B BF16 on MacBook Air M4: performance bound over capacity and parallelism",
+    fig.suptitle("Qwen3-0.6B BF16 on MacBook Air M4: resource reference over capacity and parallelism",
                  color=INK, fontsize=12, x=0.01, ha="left")
     out = Path("results/figures")
     fig.savefig(out / "perf_capacity_parallelism.png", dpi=160, facecolor=SURFACE, bbox_inches="tight")
     (out / "perf_capacity_parallelism.json").write_text(json.dumps({
+        "interpretation": "calibrated_kernel_parallelism_reference_not_universal_thread_limit",
         "source": rec["timestamp"], "threads": r["threads"], "S_bytes": S.tolist(),
         "little_ilp1": fit1, "little_ilp4": fit4, "peak_flops": peak, "cases": out_cases}))
 

@@ -160,7 +160,7 @@ class _Builder:
         self.op(name, "contraction", group, (x, w), (out,), 2 * m_ * n * k, layer, m=m_, n=n, k=k)
 
 
-def _build(m: ModelSpec, phase: str, batch: int, new: int, cached: int) -> Graph:
+def _build(m: ModelSpec, phase: str, batch: int, new: int, cached: int, *, prune_final: bool = False) -> Graph:
     """Forward pass over `new` tokens per sequence for `batch` sequences, each
     with `cached` tokens of K/V already in DRAM. Query position i (0-based
     among the new tokens) attends to cached + i + 1 keys. Logits are only
@@ -188,19 +188,29 @@ def _build(m: ModelSpec, phase: str, batch: int, new: int, cached: int) -> Graph
 
         h = b.tensor(p + "h", (rows, d))
         b.op(p + "in_norm", "rowwise", "other", (x, w["in_norm"]), (h,), layer=l)
-        q, k, v = (b.tensor(p + n, (rows, dim)) for n, dim in
+        final = prune_final and l == m.num_layers - 1
+        active_rows = batch if final else rows
+        q_input = h
+        residual_input = x
+        if final:
+            q_input = b.tensor(p + "h_last", (batch, d))
+            b.op(p + "gather_h_last", "gather", "other", (h,), (q_input,), layer=l, rows=batch)
+            residual_input = b.tensor(p + "x_last", (batch, d))
+            b.op(p + "gather_x_last", "gather", "other", (x,), (residual_input,), layer=l, rows=batch)
+        q, k, v = (b.tensor(p + n, (active_rows if n == "q_raw" else rows, dim)) for n, dim in
                    (("q_raw", m.q_dim), ("k_raw", m.kv_dim), ("v", m.kv_dim)))
         for name, out in (("q", q), ("k", k), ("v", v)):
-            b.linear(f"{p}{name}_proj", "qkv", h, w[name], out, l)
+            b.linear(f"{p}{name}_proj", "qkv", q_input if name == "q" else h, w[name], out, l)
         if m.qk_norm:
-            qn, kn = b.tensor(p + "q_normed", (rows, m.q_dim)), b.tensor(p + "k_normed", (rows, m.kv_dim))
+            qn, kn = b.tensor(p + "q_normed", (active_rows, m.q_dim)), b.tensor(p + "k_normed", (rows, m.kv_dim))
             b.op(p + "q_norm", "rowwise", "other", (q, w["q_norm"]), (qn,), layer=l)
             b.op(p + "k_norm", "rowwise", "other", (k, w["k_norm"]), (kn,), layer=l)
             q, k = qn, kn
         # New K (after RoPE) and V are also step outputs: they must reach the cache.
-        qr = b.tensor(p + "q", (rows, m.q_dim))
+        qr = b.tensor(p + "q", (active_rows, m.q_dim))
         kr = b.tensor(p + "k", (rows, m.kv_dim), "kv_new", kv_e)
-        b.op(p + "rope", "elementwise", "other", (q, k), (qr, kr), layer=l)
+        b.op(p + "q_rope", "elementwise", "other", (q,), (qr,), layer=l)
+        b.op(p + "k_rope", "elementwise", "other", (k,), (kr,), layer=l)
         vn = b.tensor(p + "v_new", (rows, m.kv_dim), "kv_new", kv_e)
         b.op(p + "v_store", "elementwise", "other", (v,), (vn,), layer=l)
 
@@ -209,26 +219,28 @@ def _build(m: ModelSpec, phase: str, batch: int, new: int, cached: int) -> Graph
             kc = b.tensor(p + "K_cache", (batch, cached, m.kv_dim), "kv_cache", kv_e)
             vc = b.tensor(p + "V_cache", (batch, cached, m.kv_dim), "kv_cache", kv_e)
             attn_in += (kc, vc)
-        o = b.tensor(p + "attn_out", (rows, m.q_dim))
-        b.op(p + "attention", "attention", "attention", attn_in, (o,), 4 * scores * m.head_dim, l,
-             scores=scores, head_dim=m.head_dim, heads=m.num_heads, kv_heads=m.num_kv_heads,
-             batch=batch, new=new, cached=cached)
+        o = b.tensor(p + "attn_out", (active_rows, m.q_dim))
+        layer_scores = m.num_heads * batch * (cached + new) if final else scores
+        b.op(p + "attention", "attention", "attention", attn_in, (o,), 4 * layer_scores * m.head_dim, l,
+             scores=layer_scores, head_dim=m.head_dim, heads=m.num_heads, kv_heads=m.num_kv_heads,
+             batch=batch, new=new, cached=cached, query_rows=1 if final else new,
+             final_query_only=int(final))
 
-        a = b.tensor(p + "o", (rows, d))
+        a = b.tensor(p + "o", (active_rows, d))
         b.linear(p + "o_proj", "o_proj", o, w["o"], a, l)
-        x1 = b.tensor(p + "x_mid", (rows, d))
-        b.op(p + "resid_attn", "elementwise", "other", (x, a), (x1,), layer=l)
-        h2 = b.tensor(p + "h2", (rows, d))
+        x1 = b.tensor(p + "x_mid", (active_rows, d))
+        b.op(p + "resid_attn", "elementwise", "other", (residual_input, a), (x1,), layer=l)
+        h2 = b.tensor(p + "h2", (active_rows, d))
         b.op(p + "post_norm", "rowwise", "other", (x1, w["post_norm"]), (h2,), layer=l)
-        g = b.tensor(p + "gate", (rows, m.intermediate_size))
-        u = b.tensor(p + "up", (rows, m.intermediate_size))
+        g = b.tensor(p + "gate", (active_rows, m.intermediate_size))
+        u = b.tensor(p + "up", (active_rows, m.intermediate_size))
         b.linear(p + "gate_proj", "mlp", h2, w["gate"], g, l)
         b.linear(p + "up_proj", "mlp", h2, w["up"], u, l)
-        act = b.tensor(p + "act", (rows, m.intermediate_size))
+        act = b.tensor(p + "act", (active_rows, m.intermediate_size))
         b.op(p + "swiglu", "elementwise", "other", (g, u), (act,), layer=l)
-        dn = b.tensor(p + "down", (rows, d))
+        dn = b.tensor(p + "down", (active_rows, d))
         b.linear(p + "down_proj", "mlp", act, w["down"], dn, l)
-        x_next = b.tensor(f"x{l + 1}", (rows, d))
+        x_next = b.tensor(f"x{l + 1}", (active_rows, d))
         b.op(p + "resid_mlp", "elementwise", "other", (x1, dn), (x_next,), layer=l)
         x = x_next
 
@@ -260,8 +272,8 @@ def decode_graph(m: ModelSpec, batch: int, context: int) -> Graph:
     return _build(m, "decode", batch, new=1, cached=context)
 
 
-def prefill_graph(m: ModelSpec, batch: int, prompt_len: int) -> Graph:
+def prefill_graph(m: ModelSpec, batch: int, prompt_len: int, *, prune_final: bool = True) -> Graph:
     """Causal prefill of `prompt_len` tokens, matching workload.prefill."""
     if batch < 1 or prompt_len < 1:
         raise ValueError("batch and prompt_len must be >= 1")
-    return _build(m, "prefill", batch, new=prompt_len, cached=0)
+    return _build(m, "prefill", batch, new=prompt_len, cached=0, prune_final=prune_final)

@@ -33,7 +33,9 @@ class Quantity:
         return {
             "value": self.effective,
             "origin": self.origin,
-            "confidence": "high" if self.measured is not None else self.confidence,
+            "confidence": self.confidence,
+            "note": self.note,
+            "certified_ceiling": False,
         }
 
     @classmethod

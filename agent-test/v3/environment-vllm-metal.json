@@ -1,0 +1,47 @@
+{
+  "vllm": {
+    "version": "0.30.0+cpu",
+    "origin": {
+      "url": "https://github.com/vllm-project/vllm/releases/download/v0.30.0/vllm-0.30.0%2Bcpu-cp312-cp312-macosx_11_0_arm64.whl",
+      "archive_info": {}
+    }
+  },
+  "vllm-metal": {
+    "version": "0.30.0",
+    "origin": {
+      "url": "https://github.com/vllm-project/vllm-metal/releases/download/v0.30.0/vllm_metal-0.30.0-cp312-cp312-macosx_15_0_arm64.whl",
+      "archive_info": {}
+    }
+  },
+  "mlx": {
+    "version": "0.32.1",
+    "origin": null
+  },
+  "mlx-metal": {
+    "version": "0.32.1",
+    "origin": null
+  },
+  "mlx-lm": {
+    "version": "0.32.0",
+    "origin": {
+      "url": "https://github.com/ml-explore/mlx-lm",
+      "vcs_info": {
+        "vcs": "git",
+        "commit_id": "9e6acca691e64d6d8bb808c328fcdea459099cca",
+        "requested_revision": "9e6acca691e64d6d8bb808c328fcdea459099cca"
+      }
+    }
+  },
+  "torch": {
+    "version": "2.13.0",
+    "origin": null
+  },
+  "transformers": {
+    "version": "5.19.0",
+    "origin": null
+  },
+  "numpy": {
+    "version": "2.3.5",
+    "origin": null
+  }
+}

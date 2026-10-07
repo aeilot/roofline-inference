@@ -25,31 +25,49 @@
     "gpu.compute.bf16": {
      "value": 3680000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+     "certified_ceiling": false
     },
     "core.capacity": {
      "value": 524288.0,
      "origin": "estimate",
      "confidence": "low",
+     "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+     "certified_ceiling": false,
      "instances": 10
     },
     "core.bandwidth": {
      "value": 770000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "Aggregate bandwidth from the shared on-chip cache (GPU L2) into the cores. benchmarks/hierarchy.py shared-read sweep, 160 groups, every group streams the whole buffer: 700-774 GB/s (best) for 0.4-2.9 MiB, falling from 4 MiB (SLC, 480 -> 150 GB/s) to DRAM speed by ~16 MiB. Burst, load avg ~4. Threadgroup memory reads reach 690-890 GB/s aggregate (not a boundary in this model).",
+     "certified_ceiling": false
     },
     "chip.capacity": {
      "value": 12582912.0,
      "origin": "measured",
-     "confidence": "high",
+     "confidence": "low",
+     "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+     "certified_ceiling": false,
      "instances": 1
     },
     "chip.bandwidth": {
      "value": 102700000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+     "certified_ceiling": false
     }
    },
+   "interpretation": "calibrated_resource_reference",
+   "hardware_ceiling_certified": false,
+   "computation_scope": "full_product_graph",
+   "assumptions": [
+    "Fixed explicit KV representation; rates/capacities are calibration assumptions.",
+    "An operator lower bound is not an attainable schedule or an upper bound.",
+    "Experimental fused proof is excluded unless explicitly requested."
+   ],
    "fused": {
     "time_s": 0.012006903602726387,
     "bottleneck": "io.chip",
@@ -69,11 +87,15 @@
     "terms": {
      "core": {
       "compulsory": 1245691912.0,
-      "pebble": 0.0
+      "pebble": 0.0,
+      "experimental_pebble": 0.0,
+      "experimental_applied": false
      },
      "chip": {
       "compulsory": 1233109000.0,
-      "pebble": 0.0
+      "pebble": 0.0,
+      "experimental_pebble": 0.0,
+      "experimental_applied": false
      }
     }
    },
@@ -182,31 +204,49 @@
     "gpu.compute.bf16": {
      "value": 3680000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+     "certified_ceiling": false
     },
     "core.capacity": {
      "value": 524288.0,
      "origin": "estimate",
      "confidence": "low",
+     "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+     "certified_ceiling": false,
      "instances": 10
     },
     "core.bandwidth": {
      "value": 770000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "Aggregate bandwidth from the shared on-chip cache (GPU L2) into the cores. benchmarks/hierarchy.py shared-read sweep, 160 groups, every group streams the whole buffer: 700-774 GB/s (best) for 0.4-2.9 MiB, falling from 4 MiB (SLC, 480 -> 150 GB/s) to DRAM speed by ~16 MiB. Burst, load avg ~4. Threadgroup memory reads reach 690-890 GB/s aggregate (not a boundary in this model).",
+     "certified_ceiling": false
     },
     "chip.capacity": {
      "value": 12582912.0,
      "origin": "measured",
-     "confidence": "high",
+     "confidence": "low",
+     "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+     "certified_ceiling": false,
      "instances": 1
     },
     "chip.bandwidth": {
      "value": 102700000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+     "certified_ceiling": false
     }
    },
+   "interpretation": "calibrated_resource_reference",
+   "hardware_ceiling_certified": false,
+   "computation_scope": "full_product_graph",
+   "assumptions": [
+    "Fixed explicit KV representation; rates/capacities are calibration assumptions.",
+    "An operator lower bound is not an attainable schedule or an upper bound.",
+    "Experimental fused proof is excluded unless explicitly requested."
+   ],
    "fused": {
     "time_s": 0.016009257955209348,
     "bottleneck": "io.chip",
@@ -226,11 +266,15 @@
     "terms": {
      "core": {
       "compulsory": 1656733704.0,
-      "pebble": 0.0
+      "pebble": 0.0,
+      "experimental_pebble": 0.0,
+      "experimental_applied": false
      },
      "chip": {
       "compulsory": 1644150792.0,
-      "pebble": 0.0
+      "pebble": 0.0,
+      "experimental_pebble": 0.0,
+      "experimental_applied": false
      }
     }
    },
@@ -339,31 +383,49 @@
     "gpu.compute.bf16": {
      "value": 3680000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+     "certified_ceiling": false
     },
     "core.capacity": {
      "value": 524288.0,
      "origin": "estimate",
      "confidence": "low",
+     "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+     "certified_ceiling": false,
      "instances": 10
     },
     "core.bandwidth": {
      "value": 770000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "Aggregate bandwidth from the shared on-chip cache (GPU L2) into the cores. benchmarks/hierarchy.py shared-read sweep, 160 groups, every group streams the whole buffer: 700-774 GB/s (best) for 0.4-2.9 MiB, falling from 4 MiB (SLC, 480 -> 150 GB/s) to DRAM speed by ~16 MiB. Burst, load avg ~4. Threadgroup memory reads reach 690-890 GB/s aggregate (not a boundary in this model).",
+     "certified_ceiling": false
     },
     "chip.capacity": {
      "value": 12582912.0,
      "origin": "measured",
-     "confidence": "high",
+     "confidence": "low",
+     "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+     "certified_ceiling": false,
      "instances": 1
     },
     "chip.bandwidth": {
      "value": 102700000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+     "certified_ceiling": false
     }
    },
+   "interpretation": "calibrated_resource_reference",
+   "hardware_ceiling_certified": false,
+   "computation_scope": "full_product_graph",
+   "assumptions": [
+    "Fixed explicit KV representation; rates/capacities are calibration assumptions.",
+    "An operator lower bound is not an attainable schedule or an upper bound.",
+    "Experimental fused proof is excluded unless explicitly requested."
+   ],
    "fused": {
     "time_s": 0.04802809277507303,
     "bottleneck": "io.chip",
@@ -383,11 +445,15 @@
     "terms": {
      "core": {
       "compulsory": 4945068040.0,
-      "pebble": 0.0
+      "pebble": 0.0,
+      "experimental_pebble": 0.0,
+      "experimental_applied": false
      },
      "chip": {
       "compulsory": 4932485128.0,
-      "pebble": 0.0
+      "pebble": 0.0,
+      "experimental_pebble": 0.0,
+      "experimental_applied": false
      }
     }
    },
@@ -490,48 +556,66 @@
    "batch": 1,
    "new": 16,
    "cached": 0,
-   "flops": 14435221504.0,
+   "flops": 14025293824.0,
    "peak_flops": 3680000000000.0,
    "inputs": {
     "gpu.compute.bf16": {
      "value": 3680000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+     "certified_ceiling": false
     },
     "core.capacity": {
      "value": 524288.0,
      "origin": "estimate",
      "confidence": "low",
+     "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+     "certified_ceiling": false,
      "instances": 10
     },
     "core.bandwidth": {
      "value": 770000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "Aggregate bandwidth from the shared on-chip cache (GPU L2) into the cores. benchmarks/hierarchy.py shared-read sweep, 160 groups, every group streams the whole buffer: 700-774 GB/s (best) for 0.4-2.9 MiB, falling from 4 MiB (SLC, 480 -> 150 GB/s) to DRAM speed by ~16 MiB. Burst, load avg ~4. Threadgroup memory reads reach 690-890 GB/s aggregate (not a boundary in this model).",
+     "certified_ceiling": false
     },
     "chip.capacity": {
      "value": 12582912.0,
      "origin": "measured",
-     "confidence": "high",
+     "confidence": "low",
+     "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+     "certified_ceiling": false,
      "instances": 1
     },
     "chip.bandwidth": {
      "value": 102700000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+     "certified_ceiling": false
     }
    },
+   "interpretation": "calibrated_resource_reference",
+   "hardware_ceiling_certified": false,
+   "computation_scope": "useful_product_graph",
+   "assumptions": [
+    "Fixed explicit KV representation; rates/capacities are calibration assumptions.",
+    "An operator lower bound is not an attainable schedule or an upper bound.",
+    "Experimental fused proof is excluded unless explicitly requested."
+   ],
    "fused": {
     "time_s": 0.011451890204479065,
     "bottleneck": "io.chip",
     "resource_time_s": {
-     "compute": 0.003922614539130434,
+     "compute": 0.003811221147826087,
      "io.core": 0.0015437558909090908,
      "io.chip": 0.011451890204479065
     },
     "intensity": {
-     "core": 12.143785830832302,
-     "chip": 12.273709309307254
+     "core": 11.798929747351314,
+     "chip": 11.92516369254865
     },
     "bytes": {
      "core": 1188692036.0,
@@ -540,11 +624,15 @@
     "terms": {
      "core": {
       "compulsory": 1188692036.0,
-      "pebble": 1478257.2243598502
+      "pebble": 0.0,
+      "experimental_pebble": 1357938.7856853066,
+      "experimental_applied": false
      },
      "chip": {
       "compulsory": 1176109124.0,
-      "pebble": 0.0
+      "pebble": 0.0,
+      "experimental_pebble": 0.0,
+      "experimental_applied": false
      }
     }
    },
@@ -552,13 +640,13 @@
     "time_s": 0.011451890204479065,
     "bottleneck": "io.chip",
     "resource_time_s": {
-     "compute": 0.003922614539130434,
+     "compute": 0.003811221147826087,
      "io.core": 0.0015437558909090908,
      "io.chip": 0.011451890204479065
     },
     "intensity": {
-     "core": 12.143785830832302,
-     "chip": 12.273709309307254
+     "core": 11.798929747351314,
+     "chip": 11.92516369254865
     },
     "bytes": {
      "core": 1188692036.0,
@@ -567,21 +655,21 @@
     "groups": {
      "core": {
       "qkv": {
-       "flops": 3758096384.0,
+       "flops": 3695181824.0,
        "bytes": 236716032.0,
        "binding": {
-        "compulsory": 28
+        "compulsory": 29
        }
       },
       "o_proj": {
-       "flops": 1879048192.0,
+       "flops": 1816133632.0,
        "bytes": 117440512.0,
        "binding": {
         "compulsory": 28
        }
       },
       "mlp": {
-       "flops": 8455716864.0,
+       "flops": 8172601344.0,
        "bytes": 528482304.0,
        "binding": {
         "compulsory": 56
@@ -595,7 +683,7 @@
        }
       },
       "attention": {
-       "flops": 31195136.0,
+       "flops": 30212096.0,
        "bytes": 0.0,
        "binding": {
         "compulsory": 28
@@ -604,21 +692,21 @@
      },
      "chip": {
       "qkv": {
-       "flops": 3758096384.0,
+       "flops": 3695181824.0,
        "bytes": 236716032.0,
        "binding": {
-        "compulsory": 28
+        "compulsory": 29
        }
       },
       "o_proj": {
-       "flops": 1879048192.0,
+       "flops": 1816133632.0,
        "bytes": 117440512.0,
        "binding": {
         "compulsory": 28
        }
       },
       "mlp": {
-       "flops": 8455716864.0,
+       "flops": 8172601344.0,
        "bytes": 528482304.0,
        "binding": {
         "compulsory": 56
@@ -632,7 +720,7 @@
        }
       },
       "attention": {
-       "flops": 31195136.0,
+       "flops": 30212096.0,
        "bytes": 0.0,
        "binding": {
         "compulsory": 28
@@ -647,48 +735,66 @@
    "batch": 1,
    "new": 64,
    "cached": 0,
-   "flops": 57159712768.0,
+   "flops": 55425630208.0,
    "peak_flops": 3680000000000.0,
    "inputs": {
     "gpu.compute.bf16": {
      "value": 3680000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+     "certified_ceiling": false
     },
     "core.capacity": {
      "value": 524288.0,
      "origin": "estimate",
      "confidence": "low",
+     "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+     "certified_ceiling": false,
      "instances": 10
     },
     "core.bandwidth": {
      "value": 770000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "Aggregate bandwidth from the shared on-chip cache (GPU L2) into the cores. benchmarks/hierarchy.py shared-read sweep, 160 groups, every group streams the whole buffer: 700-774 GB/s (best) for 0.4-2.9 MiB, falling from 4 MiB (SLC, 480 -> 150 GB/s) to DRAM speed by ~16 MiB. Burst, load avg ~4. Threadgroup memory reads reach 690-890 GB/s aggregate (not a boundary in this model).",
+     "certified_ceiling": false
     },
     "chip.capacity": {
      "value": 12582912.0,
      "origin": "measured",
-     "confidence": "high",
+     "confidence": "low",
+     "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+     "certified_ceiling": false,
      "instances": 1
     },
     "chip.bandwidth": {
      "value": 102700000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+     "certified_ceiling": false
     }
    },
+   "interpretation": "calibrated_resource_reference",
+   "hardware_ceiling_certified": false,
+   "computation_scope": "useful_product_graph",
+   "assumptions": [
+    "Fixed explicit KV representation; rates/capacities are calibration assumptions.",
+    "An operator lower bound is not an attainable schedule or an upper bound.",
+    "Experimental fused proof is excluded unless explicitly requested."
+   ],
    "fused": {
-    "time_s": 0.015532530643478261,
+    "time_s": 0.015061312556521739,
     "bottleneck": "compute",
     "resource_time_s": {
-     "compute": 0.015532530643478261,
+     "compute": 0.015061312556521739,
      "io.core": 0.0015509055220779221,
      "io.chip": 0.011505495034079844
     },
     "intensity": {
-     "core": 47.86454890284742,
-     "chip": 48.37425446952514
+     "core": 46.41245833983882,
+     "chip": 46.90670071590363
     },
     "bytes": {
      "core": 1194197252.0,
@@ -697,25 +803,29 @@
     "terms": {
      "core": {
       "compulsory": 1194197252.0,
-      "pebble": 14169804.887192775
+      "pebble": 0.0,
+      "experimental_pebble": 13498913.746908396,
+      "experimental_applied": false
      },
      "chip": {
       "compulsory": 1181614340.0,
-      "pebble": 0.0
+      "pebble": 0.0,
+      "experimental_pebble": 0.0,
+      "experimental_applied": false
      }
     }
    },
    "operator": {
-    "time_s": 0.015532530643478261,
+    "time_s": 0.015061312556521739,
     "bottleneck": "compute",
     "resource_time_s": {
-     "compute": 0.015532530643478261,
+     "compute": 0.015061312556521739,
      "io.core": 0.0015509055220779221,
      "io.chip": 0.011505495034079844
     },
     "intensity": {
-     "core": 47.86454890284742,
-     "chip": 48.37425446952514
+     "core": 46.41245833983882,
+     "chip": 46.90670071590363
     },
     "bytes": {
      "core": 1194197252.0,
@@ -724,21 +834,21 @@
     "groups": {
      "core": {
       "qkv": {
-       "flops": 15032385536.0,
+       "flops": 14768144384.0,
        "bytes": 242221056.0,
        "binding": {
-        "compulsory": 28
+        "compulsory": 29
        }
       },
       "o_proj": {
-       "flops": 7516192768.0,
+       "flops": 7251951616.0,
        "bytes": 117440512.0,
        "binding": {
         "compulsory": 28
        }
       },
       "mlp": {
-       "flops": 33822867456.0,
+       "flops": 32633782272.0,
        "bytes": 528482304.0,
        "binding": {
         "compulsory": 56
@@ -752,7 +862,7 @@
        }
       },
       "attention": {
-       "flops": 477102080.0,
+       "flops": 460587008.0,
        "bytes": 0.0,
        "binding": {
         "compulsory": 28
@@ -761,21 +871,21 @@
      },
      "chip": {
       "qkv": {
-       "flops": 15032385536.0,
+       "flops": 14768144384.0,
        "bytes": 242221056.0,
        "binding": {
-        "compulsory": 28
+        "compulsory": 29
        }
       },
       "o_proj": {
-       "flops": 7516192768.0,
+       "flops": 7251951616.0,
        "bytes": 117440512.0,
        "binding": {
         "compulsory": 28
        }
       },
       "mlp": {
-       "flops": 33822867456.0,
+       "flops": 32633782272.0,
        "bytes": 528482304.0,
        "binding": {
         "compulsory": 56
@@ -789,7 +899,7 @@
        }
       },
       "attention": {
-       "flops": 477102080.0,
+       "flops": 460587008.0,
        "bytes": 0.0,
        "binding": {
         "compulsory": 28
@@ -804,48 +914,66 @@
    "batch": 1,
    "new": 512,
    "cached": 0,
-   "flops": 481406222336.0,
+   "flops": 466403196928.0,
    "peak_flops": 3680000000000.0,
    "inputs": {
     "gpu.compute.bf16": {
      "value": 3680000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+     "certified_ceiling": false
     },
     "core.capacity": {
      "value": 524288.0,
      "origin": "estimate",
      "confidence": "low",
+     "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+     "certified_ceiling": false,
      "instances": 10
     },
     "core.bandwidth": {
      "value": 770000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "Aggregate bandwidth from the shared on-chip cache (GPU L2) into the cores. benchmarks/hierarchy.py shared-read sweep, 160 groups, every group streams the whole buffer: 700-774 GB/s (best) for 0.4-2.9 MiB, falling from 4 MiB (SLC, 480 -> 150 GB/s) to DRAM speed by ~16 MiB. Burst, load avg ~4. Threadgroup memory reads reach 690-890 GB/s aggregate (not a boundary in this model).",
+     "certified_ceiling": false
     },
     "chip.capacity": {
      "value": 12582912.0,
      "origin": "measured",
-     "confidence": "high",
+     "confidence": "low",
+     "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+     "certified_ceiling": false,
      "instances": 1
     },
     "chip.bandwidth": {
      "value": 102700000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+     "certified_ceiling": false
     }
    },
+   "interpretation": "calibrated_resource_reference",
+   "hardware_ceiling_certified": false,
+   "computation_scope": "useful_product_graph",
+   "assumptions": [
+    "Fixed explicit KV representation; rates/capacities are calibration assumptions.",
+    "An operator lower bound is not an attainable schedule or an upper bound.",
+    "Experimental fused proof is excluded unless explicitly requested."
+   ],
    "fused": {
-    "time_s": 0.13081690824347825,
+    "time_s": 0.1267399991652174,
     "bottleneck": "compute",
     "resource_time_s": {
-     "compute": 0.13081690824347825,
+     "compute": 0.1267399991652174,
      "io.core": 0.001617635412987013,
      "io.chip": 0.012005806777020447
     },
     "intensity": {
-     "core": 386.4918393423356,
-     "chip": 390.43604629760966
+     "core": 374.44682077672473,
+     "chip": 378.26810651823206
     },
     "bytes": {
      "core": 1245579268.0,
@@ -854,49 +982,53 @@
     "terms": {
      "core": {
       "compulsory": 1245579268.0,
-      "pebble": 145722841.9344847
+      "pebble": 0.0,
+      "experimental_pebble": 140235480.1074384,
+      "experimental_applied": false
      },
      "chip": {
       "compulsory": 1232996356.0,
-      "pebble": 693315.193257916
+      "pebble": 0.0,
+      "experimental_pebble": 581543.2173170758,
+      "experimental_applied": false
      }
     }
    },
    "operator": {
-    "time_s": 0.13081690824347825,
+    "time_s": 0.1267399991652174,
     "bottleneck": "compute",
     "resource_time_s": {
-     "compute": 0.13081690824347825,
-     "io.core": 0.0016557654493506494,
+     "compute": 0.1267399991652174,
+     "io.core": 0.0016544036623376624,
      "io.chip": 0.012005806777020447
     },
     "intensity": {
-     "core": 377.5914555988824,
-     "chip": 390.43604629760966
+     "core": 366.1249375578356,
+     "chip": 378.26810651823206
     },
     "bytes": {
-     "core": 1274939396.0,
+     "core": 1273890820.0,
      "chip": 1232996356.0
     },
     "groups": {
      "core": {
       "qkv": {
-       "flops": 120259084288.0,
+       "flops": 118115794944.0,
        "bytes": 293601280.0,
        "binding": {
-        "compulsory": 28
+        "compulsory": 29
        }
       },
       "o_proj": {
-       "flops": 60129542144.0,
+       "flops": 57986252800.0,
        "bytes": 117440512.0,
        "binding": {
         "compulsory": 28
        }
       },
       "mlp": {
-       "flops": 270582939648.0,
-       "bytes": 557842432.0,
+       "flops": 260938137600.0,
+       "bytes": 556793856.0,
        "binding": {
         "compulsory": 56
        }
@@ -909,7 +1041,7 @@
        }
       },
       "attention": {
-       "flops": 30123491328.0,
+       "flops": 29051846656.0,
        "bytes": 0.0,
        "binding": {
         "compulsory": 28
@@ -918,21 +1050,21 @@
      },
      "chip": {
       "qkv": {
-       "flops": 120259084288.0,
+       "flops": 118115794944.0,
        "bytes": 293601280.0,
        "binding": {
-        "compulsory": 28
+        "compulsory": 29
        }
       },
       "o_proj": {
-       "flops": 60129542144.0,
+       "flops": 57986252800.0,
        "bytes": 117440512.0,
        "binding": {
         "compulsory": 28
        }
       },
       "mlp": {
-       "flops": 270582939648.0,
+       "flops": 260938137600.0,
        "bytes": 528482304.0,
        "binding": {
         "compulsory": 56
@@ -946,7 +1078,7 @@
        }
       },
       "attention": {
-       "flops": 30123491328.0,
+       "flops": 29051846656.0,
        "bytes": 0.0,
        "binding": {
         "compulsory": 28
@@ -961,48 +1093,66 @@
    "batch": 1,
    "new": 4096,
    "cached": 0,
-   "flops": 5532698804224.0,
+   "flops": 5352354217984.0,
    "peak_flops": 3680000000000.0,
    "inputs": {
     "gpu.compute.bf16": {
      "value": 3680000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+     "certified_ceiling": false
     },
     "core.capacity": {
      "value": 524288.0,
      "origin": "estimate",
      "confidence": "low",
+     "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+     "certified_ceiling": false,
      "instances": 10
     },
     "core.bandwidth": {
      "value": 770000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "Aggregate bandwidth from the shared on-chip cache (GPU L2) into the cores. benchmarks/hierarchy.py shared-read sweep, 160 groups, every group streams the whole buffer: 700-774 GB/s (best) for 0.4-2.9 MiB, falling from 4 MiB (SLC, 480 -> 150 GB/s) to DRAM speed by ~16 MiB. Burst, load avg ~4. Threadgroup memory reads reach 690-890 GB/s aggregate (not a boundary in this model).",
+     "certified_ceiling": false
     },
     "chip.capacity": {
      "value": 12582912.0,
      "origin": "measured",
-     "confidence": "high",
+     "confidence": "low",
+     "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+     "certified_ceiling": false,
      "instances": 1
     },
     "chip.bandwidth": {
      "value": 102700000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+     "certified_ceiling": false
     }
    },
+   "interpretation": "calibrated_resource_reference",
+   "hardware_ceiling_certified": false,
+   "computation_scope": "useful_product_graph",
+   "assumptions": [
+    "Fixed explicit KV representation; rates/capacities are calibration assumptions.",
+    "An operator lower bound is not an attainable schedule or an upper bound.",
+    "Experimental fused proof is excluded unless explicitly requested."
+   ],
    "fused": {
-    "time_s": 1.5034507620173914,
+    "time_s": 1.454444080973913,
     "bottleneck": "compute",
     "resource_time_s": {
-     "compute": 1.5034507620173914,
+     "compute": 1.454444080973913,
      "io.core": 0.00215147454025974,
      "io.chip": 0.016008300720545276
     },
     "intensity": {
-     "core": 3339.7202652936676,
-     "chip": 3365.281131878999
+     "core": 3230.858299241603,
+     "chip": 3255.585980419345
     },
     "bytes": {
      "core": 1656635396.0,
@@ -1011,51 +1161,58 @@
     "terms": {
      "core": {
       "compulsory": 1656635396.0,
-      "pebble": 1211198570.221292
+      "pebble": 0.0,
+      "experimental_pebble": 1167215318.3407018,
+      "experimental_applied": false
      },
      "chip": {
       "compulsory": 1644052484.0,
-      "pebble": 27016314.09681226
+      "pebble": 0.0,
+      "experimental_pebble": 25544357.362593606,
+      "experimental_applied": false
      }
     }
    },
    "operator": {
-    "time_s": 1.5034507620173914,
+    "time_s": 1.454444080973913,
     "bottleneck": "compute",
     "resource_time_s": {
-     "compute": 1.5034507620173914,
-     "io.core": 0.017861049522077923,
-     "io.chip": 0.03116007076923077
+     "compute": 1.454444080973913,
+     "io.core": 0.017354470072727272,
+     "io.chip": 0.030618936124634857
     },
     "intensity": {
-     "core": 402.2900845489008,
-     "chip": 1728.893132729747
+     "core": 400.53711492631135,
+     "chip": 1702.0970024563717
     },
     "bytes": {
-     "core": 13753008132.0,
-     "chip": 3200139268.0
+     "core": 13362941956.0,
+     "chip": 3144564740.0
     },
     "groups": {
      "core": {
       "qkv": {
-       "flops": 962072674304.0,
-       "bytes": 3317694464.0,
+       "flops": 944896999424.0,
+       "bytes": 3254779904.0,
        "binding": {
-        "pebble": 28
+        "pebble": 28,
+        "compulsory": 1
        }
       },
       "o_proj": {
-       "flops": 481036337152.0,
-       "bytes": 1438646272.0,
+       "flops": 463860662272.0,
+       "bytes": 1391460352.0,
        "binding": {
-        "pebble": 28
+        "pebble": 27,
+        "compulsory": 1
        }
       },
       "mlp": {
-       "flops": 2164663517184.0,
-       "bytes": 7574913024.0,
+       "flops": 2087372980224.0,
+       "bytes": 7323254784.0,
        "binding": {
-        "pebble": 56
+        "pebble": 54,
+        "compulsory": 2
        }
       },
       "lm_head": {
@@ -1066,8 +1223,8 @@
        }
       },
       "attention": {
-       "flops": 1924615110656.0,
-       "bytes": 1115684864.0,
+       "flops": 1855912411136.0,
+       "bytes": 1087377408.0,
        "binding": {
         "compulsory": 28
        }
@@ -1075,22 +1232,22 @@
      },
      "chip": {
       "qkv": {
-       "flops": 962072674304.0,
+       "flops": 944896999424.0,
        "bytes": 704643072.0,
        "binding": {
-        "compulsory": 28
+        "compulsory": 29
        }
       },
       "o_proj": {
-       "flops": 481036337152.0,
+       "flops": 463860662272.0,
        "bytes": 117440512.0,
        "binding": {
         "compulsory": 28
        }
       },
       "mlp": {
-       "flops": 2164663517184.0,
-       "bytes": 1644167168.0,
+       "flops": 2087372980224.0,
+       "bytes": 1604321280.0,
        "binding": {
         "compulsory": 56
        }
@@ -1103,8 +1260,8 @@
        }
       },
       "attention": {
-       "flops": 1924615110656.0,
-       "bytes": 440401920.0,
+       "flops": 1855912411136.0,
+       "bytes": 424673280.0,
        "binding": {
         "compulsory": 28
        }
@@ -1118,101 +1275,126 @@
    "batch": 1,
    "new": 32768,
    "cached": 0,
-   "flops": 152011551801344.0,
+   "flops": 146720313573376.0,
    "peak_flops": 3680000000000.0,
    "inputs": {
     "gpu.compute.bf16": {
      "value": 3680000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+     "certified_ceiling": false
     },
     "core.capacity": {
      "value": 524288.0,
      "origin": "estimate",
      "confidence": "low",
+     "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+     "certified_ceiling": false,
      "instances": 10
     },
     "core.bandwidth": {
      "value": 770000000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "Aggregate bandwidth from the shared on-chip cache (GPU L2) into the cores. benchmarks/hierarchy.py shared-read sweep, 160 groups, every group streams the whole buffer: 700-774 GB/s (best) for 0.4-2.9 MiB, falling from 4 MiB (SLC, 480 -> 150 GB/s) to DRAM speed by ~16 MiB. Burst, load avg ~4. Threadgroup memory reads reach 690-890 GB/s aggregate (not a boundary in this model).",
+     "certified_ceiling": false
     },
     "chip.capacity": {
      "value": 12582912.0,
      "origin": "measured",
-     "confidence": "high",
+     "confidence": "low",
+     "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+     "certified_ceiling": false,
      "instances": 1
     },
     "chip.bandwidth": {
      "value": 102700000000.0,
      "origin": "measured",
-     "confidence": "high"
+     "confidence": "low",
+     "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+     "certified_ceiling": false
     }
    },
+   "interpretation": "calibrated_resource_reference",
+   "hardware_ceiling_certified": false,
+   "computation_scope": "useful_product_graph",
+   "assumptions": [
+    "Fixed explicit KV representation; rates/capacities are calibration assumptions.",
+    "An operator lower bound is not an attainable schedule or an upper bound.",
+    "Experimental fused proof is excluded unless explicitly requested."
+   ],
    "fused": {
-    "time_s": 41.30748690253913,
+    "time_s": 39.869650427547825,
     "bottleneck": "compute",
     "resource_time_s": {
-     "compute": 41.30748690253913,
-     "io.core": 0.012645691923273193,
+     "compute": 39.869650427547825,
+     "io.core": 0.006422187558441559,
      "io.chip": 0.048028252268743916
     },
     "intensity": {
-     "core": 15611.45099373146,
-     "chip": 30818.348773902493
+     "core": 29669.931008655258,
+     "chip": 29745.619608105753
     },
     "bytes": {
-     "core": 9737182780.920359,
+     "core": 4945084420.0,
      "chip": 4932501508.0
     },
     "terms": {
      "core": {
       "compulsory": 4945084420.0,
-      "pebble": 9737182780.920359
+      "pebble": 0.0,
+      "experimental_pebble": 9385316765.875635,
+      "experimental_applied": false
      },
      "chip": {
       "compulsory": 4932501508.0,
-      "pebble": 86838206.80583796
+      "pebble": 0.0,
+      "experimental_pebble": 82619797.22843738,
+      "experimental_applied": false
      }
     }
    },
    "operator": {
-    "time_s": 41.30748690253913,
+    "time_s": 39.869650427547825,
     "bottleneck": "compute",
     "resource_time_s": {
-     "compute": 41.30748690253913,
-     "io.core": 0.17557560812571427,
-     "io.chip": 0.4202472070496592
+     "compute": 39.869650427547825,
+     "io.core": 0.17019897191584415,
+     "io.chip": 0.40856690667964946
     },
     "intensity": {
-     "core": 1124.4021982862891,
-     "chip": 3522.0970052615226
+     "core": 1119.5476661152904,
+     "chip": 3496.6858526022615
     },
     "bytes": {
-     "core": 135193218256.79999,
-     "chip": 43159388164.0
+     "core": 131053208375.2,
+     "chip": 41959821316.0
     },
     "groups": {
      "core": {
       "qkv": {
-       "flops": 7696581394432.0,
-       "bytes": 29624369152.0,
+       "flops": 7559146635264.0,
+       "bytes": 29091692544.0,
        "binding": {
-        "pebble": 28
+        "pebble": 28,
+        "compulsory": 1
        }
       },
       "o_proj": {
-       "flops": 3848290697216.0,
-       "bytes": 14591983616.0,
+       "flops": 3710855938048.0,
+       "bytes": 14075035648.0,
        "binding": {
-        "pebble": 28
+        "pebble": 27,
+        "compulsory": 1
        }
       },
       "mlp": {
-       "flops": 17317308137472.0,
-       "bytes": 66764931072.0,
+       "flops": 16698851721216.0,
+       "bytes": 64399343616.0,
        "binding": {
-        "pebble": 56
+        "pebble": 54,
+        "compulsory": 2
        }
       },
       "lm_head": {
@@ -1223,31 +1405,32 @@
        }
       },
       "attention": {
-       "flops": 123149060407296.0,
-       "bytes": 23905750220.799995,
+       "flops": 118751148113920.0,
+       "bytes": 23180952371.199997,
        "binding": {
-        "pebble": 28
+        "pebble": 27,
+        "compulsory": 1
        }
       }
      },
      "chip": {
       "qkv": {
-       "flops": 7696581394432.0,
-       "bytes": 8631877632.0,
+       "flops": 7559146635264.0,
+       "bytes": 8515485696.0,
        "binding": {
-        "compulsory": 28
+        "compulsory": 29
        }
       },
       "o_proj": {
-       "flops": 3848290697216.0,
-       "bytes": 4756340736.0,
+       "flops": 3710855938048.0,
+       "bytes": 4590665728.0,
        "binding": {
         "compulsory": 28
        }
       },
       "mlp": {
-       "flops": 17317308137472.0,
-       "bytes": 19201523712.0,
+       "flops": 16698851721216.0,
+       "bytes": 18534629376.0,
        "binding": {
         "compulsory": 56
        }
@@ -1260,8 +1443,8 @@
        }
       },
       "attention": {
-       "flops": 123149060407296.0,
-       "bytes": 10276044800.0,
+       "flops": 118751148113920.0,
+       "bytes": 10025439232.0,
        "binding": {
         "compulsory": 28
        }

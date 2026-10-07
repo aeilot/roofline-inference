@@ -7,7 +7,7 @@
                                              hierarchy (operator bound)
   results/figures/roofline.json              every number plotted, with provenance
 
-Every point sits on its roof by construction (it is an upper bound); what the
+Every point sits on its calibrated roof by construction; this does not prove attainability; what the
 figure shows is where the intensity cap lies relative to the ridge.
 
     python scripts/plot_roofline.py
@@ -64,7 +64,7 @@ def style(ax, title: str) -> None:
         ax.spines[s].set_color(MUTED)
     ax.tick_params(colors=INK2, labelsize=9)
     ax.set_xlabel("arithmetic intensity cap (FLOP / byte across the boundary)", color=INK2, fontsize=10)
-    ax.set_ylabel("performance bound (FLOP/s)", color=INK2, fontsize=10)
+    ax.set_ylabel("calibrated resource reference (FLOP/s)", color=INK2, fontsize=10)
     ax.set_title(title, color=INK, fontsize=11, loc="left")
 
 
@@ -128,7 +128,7 @@ def main() -> None:
     ax.legend(handles=[
         Line2D([], [], marker="o", linestyle="", color=PHASE_COLOR["decode"], label="decode (context length)"),
         Line2D([], [], marker="o", linestyle="", color=PHASE_COLOR["prefill"], label="prefill (prompt length)"),
-        Line2D([], [], marker="o", linestyle="", markersize=5, color=MUTED, label="fused: whole graph, proven"),
+        Line2D([], [], marker="o", linestyle="", markersize=5, color=MUTED, label="fused: compulsory (explicit KV)"),
         Line2D([], [], marker="o", linestyle="", markersize=10, markerfacecolor="none", markeredgecolor=MUTED,
                label="operator boundary (arrow: shift)"),
         *roofs,
@@ -145,7 +145,7 @@ def main() -> None:
     ax2.set_axisbelow(True)
     ridge = peak / dram.bandwidth
     ax2.axvline(ridge, color=INK, linewidth=1.2, zorder=1)
-    ax2.annotate(f"ridge {ridge:.0f} FLOP/B\nleft: DRAM-bound, right: compute-bound", (ridge * 1.15, -0.5),
+    ax2.annotate(f"ridge {ridge:.0f} FLOP/B\nleft: DRAM term, right: compute term", (ridge * 1.15, -0.5),
                  fontsize=8, color=INK2, va="top")
     detail = {(p_, n): b for p_, n, b in bounds}
     picks = (("decode", 4096), OP_DETAIL, ("prefill", 32768))

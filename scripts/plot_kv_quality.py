@@ -4,8 +4,8 @@ x: the estimator's physical decode bound at context P with the policy's
 estimator counterpart (kvpolicy.py). y: p99 over positions and prompts of
 KL(p_exact || p_policy) (top row) and the mean NLL increase on the true
 continuation (bottom row), from benchmarks/kv_quality.py. Gray line: the
-BF16-vs-FP32 noise floor (p99 KL). Points below it are free at this
-resolution; up and left is better time, worse quality.
+BF16-vs-FP32 noise floor (p99 KL). It is a numerical reference, not a quality-equivalence threshold. Time
+coordinates are model references, not measured sparse/quantized latency.
 
   results/figures/kv_quality.png
   results/figures/kv_quality.json
@@ -58,7 +58,12 @@ def summarize(raw: dict) -> dict:
     rows = {}
     for r in raw["runs"]:
         rows.setdefault((r["P"], r["policy"]), []).append(r)
-    out = {"model": raw["model"], "T": raw["T"], "points": [], "floor": {}}
+    out = {"model": raw["model"], "T": raw["T"], "points": [], "floor": {}, "interpretation": "calibrated_reference_vs_exploratory_quality",
+           "decode_time_measured": False, "quality_equivalence_established": False,
+           "limitations": ["Overlapping prompts; token positions are not independent samples.",
+                           "No confidence intervals or task-level quality tolerance.",
+                           "Teacher forcing; continuation KV remains exact.",
+                           "Quest query-head selection differs from the KV-head traffic model."]}
     for (P, name), rs in sorted(rows.items()):
         kl = np.concatenate([r["kl"] for r in rs])
         kv = estimator_policy(name, raw["sink"], raw["page"])
@@ -119,13 +124,13 @@ def plot(s: dict, path: Path) -> None:
             if row == 0:
                 ax.set_title(f"context {P // 1024}k", color=INK, fontsize=11)
             if row == 1:
-                ax.set_xlabel("decode bound, M4 (ms per token)", color=INK2, fontsize=9)
+                ax.set_xlabel("modeled decode reference, M4 (ms; unmeasured)", color=INK2, fontsize=9)
             if col == 0:
                 ax.set_ylabel(label, color=INK2, fontsize=9)
     handles, labels = axes[0][-1].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, 0.955), ncol=3, frameon=False,
                fontsize=9, labelcolor=INK2)
-    fig.suptitle(f"Qwen3-0.6B KV policies: time bound vs quality (T = {s['T']} teacher-forced tokens)",
+    fig.suptitle(f"Qwen3-0.6B KV policies: modeled time vs exploratory quality (T = {s['T']} teacher-forced tokens)",
                  color=INK, fontsize=12, y=0.995)
     fig.tight_layout(rect=(0, 0, 1, 0.91))
     fig.savefig(path, dpi=150, facecolor=SURFACE)

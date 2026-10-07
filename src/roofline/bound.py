@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from roofline.device import Device
 from roofline.pebble import operator_traffic
-from roofline.workload import Workload
+from roofline.workload import TOKEN_BYTES, Workload
 
 
 @dataclass(frozen=True)
@@ -52,6 +52,13 @@ class Bound:
         w = self.workload
         out = {
             "bound": self.kind,
+            "interpretation": "calibrated_resource_reference",
+            "hardware_ceiling_certified": False,
+            "computation_scope": w.computation_scope,
+            "assumptions": ["Measured throughput is a calibration, not a certified hardware maximum.",
+                            "Traffic assumes explicit KV storage; alternative state representations are not exhausted.",
+                            "Resource maximum does not establish an attainable schedule.",
+                            "Exp count assumes standard softmax; it is not a universal algorithmic lower bound."],
             "phase": w.phase,
             "batch": w.batch,
             "engine": self.engine,
@@ -73,7 +80,10 @@ class Bound:
             "inputs": self.inputs,
         }
         if self.traffic:
-            out["gemms"] = self.traffic["gemms"]
+            if "gemms" in self.traffic:
+                out["gemms"] = self.traffic["gemms"]
+            if "resident_input_credit" in self.traffic:
+                out["resident_input_credit"] = self.traffic["resident_input_credit"]
             if self.traffic.get("attention"):
                 out["attention"] = self.traffic["attention"]
         if w.phase == "decode":
@@ -83,20 +93,40 @@ class Bound:
         return out
 
 
-def physical_bound(workload: Workload, device: Device, engine: str = "gpu", dtype: str = "bf16") -> Bound:
-    """T >= max(FLOPs / peak, bytes / bandwidth), plus a capacity check."""
+def physical_bound(workload: Workload, device: Device, engine: str = "gpu", dtype: str = "bf16", *, initial_resident_bytes: float | None = None) -> Bound:
+    """Calibrated resource reference; a lower bound only if rates are ceilings.
+
+    Credit initially resident inputs (never compulsory output writes). The
+    default credits all modeled storage inside DRAM; pass 0 for a cold start.
+    """
     e = device.engine(engine)
     peak = e.peak_flops(dtype)
     bandwidth = device.bandwidth(engine)
+    residency_overridden = initial_resident_bytes is not None
+    if initial_resident_bytes is None:
+        initial_resident_bytes = (sum(l.capacity.effective * l.instances for l in device.hierarchy)
+                                  if device.hierarchy else device.on_chip.effective if device.on_chip else 0.0)
+    if not math.isfinite(initial_resident_bytes) or initial_resident_bytes < 0:
+        raise ValueError("initial_resident_bytes must be finite and nonnegative")
+    readable = sum(v for k, v in workload.bytes.items() if k != "kv_write") - workload.batch * TOKEN_BYTES
+    credit = min(initial_resident_bytes, max(0.0, readable))
+    dram_bytes = workload.total_bytes - credit
     resources = {
         "compute": workload.total_flops / peak.effective,
-        "dram_bandwidth": workload.total_bytes / bandwidth,
+        "dram_bandwidth": dram_bytes / bandwidth,
     }
     inputs = {
         f"{engine}.compute.{dtype}": peak.describe(),
         f"{engine}.bandwidth": e.bandwidth.describe(),
         "memory.total_bandwidth": device.total_bandwidth.describe(),
         f"{engine}.usable_memory": e.usable_memory.describe(),
+    }
+    inputs["initial_resident_bytes"] = {
+        "value": initial_resident_bytes,
+        "origin": "override" if residency_overridden else "modeled_capacity",
+        "confidence": "conditional",
+        "capacity_assumptions": ([] if residency_overridden else [
+            {"name": l.name, "instances": l.instances, **l.capacity.describe()} for l in device.hierarchy]),
     }
     # Special functions run on their own units: a separate resource in the max.
     for name, count in workload.special.items():
@@ -110,6 +140,8 @@ def physical_bound(workload: Workload, device: Device, engine: str = "gpu", dtyp
         resource_time_s=resources,
         memory_limit=e.usable_memory.effective,
         inputs=inputs,
+        traffic={"total": dram_bytes, "bytes": {**workload.bytes, "resident_input_credit": -credit},
+                 "resident_input_credit": credit},
     )
 
 
@@ -135,6 +167,10 @@ def operator_bound(
     else:
         inputs["memory.on_chip"] = {"value": on_chip_bytes, "origin": "override", "confidence": "n/a"}
     traffic = operator_traffic(workload, on_chip_bytes)
+    credit = b.traffic["resident_input_credit"]
+    traffic["total"] -= credit
+    traffic["bytes"]["resident_input_credit"] = -credit
+    traffic["resident_input_credit"] = credit
     return Bound(
         workload=workload,
         engine=engine,
@@ -161,11 +197,15 @@ def request_time(model, device: Device, prompt_len: int, gen: int, engine: str =
     attending to L + i positions."""
     from roofline.workload import decode
 
+    if gen < 1:
+        raise ValueError("gen must be >= 1")
     t_prefill = ttft(model, device, prompt_len, engine)
     steps = [physical_bound(decode(model, 1, prompt_len + i - 1), device, engine, model.weight_dtype).time_s
              for i in range(1, gen)]
     total = t_prefill + sum(steps)
     return {
+        "interpretation": "calibrated_resource_reference", "hardware_ceiling_certified": False,
+        "computation_scope": "useful_product_graph",
         "prompt_len": prompt_len, "gen": gen,
         "ttft_s": t_prefill, "decode_s": sum(steps), "total_s": total,
         "prefill_share": t_prefill / total,

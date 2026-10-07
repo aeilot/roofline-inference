@@ -6,7 +6,7 @@
 
 Per session: preflight (AC power, freeze check, keep-awake) -> probe calibration ->
 correctness gate -> main/idle -> main/warm -> carryover -> ablation ->
-divergence judging -> analysis (report.md, summary.json). Every timed request
+divergence judging -> corrected analysis (report-corrected.md, summary-corrected.json). Every timed request
 runs in its own worker process (worker.py). Completed units are skipped on re-run.
 """
 from __future__ import annotations
@@ -54,10 +54,19 @@ PROFILES = {
                    regimes=["idle"], gate="group", ablation_blocks=0, carryover_blocks=6,
                    engines=["E0", "E2"], gate_engines=["E0", "E2"]),
 }
+# Prospective three-engine validation; keep historical profiles unchanged.
+PROFILES["confirm"] = dict(
+    pairs={s: 24 for s in ("ttft16", "ttft64", "ttft256", "ttft1024", "ctx512",
+                          "ctx4096", "ctx32768", "req256x256", "req4096x128")},
+    regimes=["idle"], gate="unit", ablation_blocks=0, carryover_blocks=0,
+    engines=["E0", "E2", "V0"], gate_engines=["E0", "E2"],
+    analysis="prospective_sign_median_v2", comparator="official vLLM + vllm-metal",
+)
 FROZEN = [V2 / f for f in ["engine.py", "kernels.py", "attention.py", "thermal.py", "check.py",
                            "test_engine.py", "skinny_table.json"]] + sorted(HERE.glob("*.py"))
 # text-prompt corpus snapshot: if it changed between sessions, the same prompt id would mean different content
 FROZEN += sorted((HERE / "corpus").iterdir())
+FROZEN += [HERE / "CONFIRM.md", HERE / "environment-vllm-metal.json", HERE / "run_both.sh"]
 
 
 def session_of(block):
@@ -82,7 +91,7 @@ def schedule(session, smoke, profile):
         uid = f"{phase}-{regime}-b{block:02d}-{sid}-{engine}" + (f"-{role}{prev}-for{target}" if role else "")
         return dict(id=uid, phase=phase, regime=regime, block=block, scenario=sid, engine=engine,
                     role=role, prev=prev, target=target, kind=kind, length=L, variant=block, gen=gen,
-                    session=session, gate=True)
+                    session=session, gate=True, warm_full=profile == "confirm")
 
     def group(us):
         if P["gate"] == "group":
@@ -104,7 +113,7 @@ def schedule(session, smoke, profile):
                 engines = list(P.get("engines", MAIN_ENGINES))
                 rng.shuffle(engines)
                 units += group([unit("main", regime, b, sid, e) for e in engines])
-    for b in range(1 if smoke else P["carryover_blocks"]):
+    for b in range(min(1, P["carryover_blocks"]) if smoke else P["carryover_blocks"]):
         if not in_session(b):
             continue
         rng = random.Random(f"{SEED}-carry-{b}")
@@ -115,7 +124,7 @@ def schedule(session, smoke, profile):
             for prev, target in seqs:     # previous process, then the measured probe
                 units += group([unit("carry", "idle", b, sid, prev, "prev", prev, target),
                                 unit("carry", "idle", b, sid, target, "probe", prev, target)])
-    for b in range(1 if smoke else P["ablation_blocks"]):
+    for b in range(min(1, P["ablation_blocks"]) if smoke else P["ablation_blocks"]):
         if not in_session(b):
             continue
         rng = random.Random(f"{SEED}-abl-{b}")
@@ -148,10 +157,28 @@ def preflight(out, session, args):
                     files=file_hashes(), mlx=mx.__version__, mlx_lm=mlx_lm.__version__,
                     macos=platform.mac_ver()[0], device=mx.device_info(), on_ac_power=on_ac,
                     python=sys.version, seed=SEED)
+    from huggingface_hub import snapshot_download
+    from importlib.metadata import version
+    snapshot = Path(snapshot_download("Qwen/Qwen3-0.6B", local_files_only=True))
+    manifest["environment"] = dict(model_snapshot=snapshot.name,
+        weights={p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(snapshot.glob("*.safetensors"))},
+        plan=PROFILES[args.profile],
+        packages={k: version(k) for k in ("mlx", "mlx-lm", "numpy", "transformers")})
+    if "V0" in PROFILES[args.profile].get("engines", []):
+        vp = os.environ.get("VLLM_PYTHON", str(ROOT / ".venv-vllm-metal/bin/python"))
+        code = "import json; from importlib.metadata import version; print(json.dumps({k:version(k) for k in ('vllm','vllm-metal','mlx','mlx-lm','torch','transformers')}))"
+        manifest["environment"]["vllm_packages"] = json.loads(subprocess.check_output([vp, "-c", code], text=True))
+    import importlib.metadata as metadata
+    names = ["mlx", "mlx-lm", "transformers", "numpy"]
+    if args.profile == "confirm":
+        names += ["vllm", "vllm-metal", "torch"]
+    manifest["environment"]["package_origins"] = {name: metadata.distribution(name).read_text("direct_url.json") for name in names}
+    manifest["environment"]["model_metadata"] = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in sorted(snapshot.iterdir()) if p.suffix == ".json"}
     others = sorted(out.glob("manifest-s*.json"))
     for other in others:
         prev = json.loads(other.read_text())
-        if prev["session"] != session and prev["files"] != manifest["files"] and not args.force_unfrozen:
+        if prev["session"] != session and (prev["files"] != manifest["files"] or prev.get("environment") != manifest["environment"]) and not args.force_unfrozen:
             sys.exit(f"Code differs from {other.name}; v3 requires frozen code across sessions "
                      "(pass --force-unfrozen to override; the report will flag it).")
     mf = out / f"manifest-s{session}.json"
@@ -159,7 +186,7 @@ def preflight(out, session, args):
         old = json.loads(mf.read_text())
         manifest["started"] = old["started"]
         manifest["resumed"] = old.get("resumed", []) + [datetime.now().isoformat()]
-        if old["files"] != manifest["files"] and not args.force_unfrozen:
+        if (old["files"] != manifest["files"] or old.get("environment") != manifest["environment"]) and not args.force_unfrozen:
             sys.exit("Code changed since this session started (see manifest).")
         manifest["probe_ref_ms"] = old.get("probe_ref_ms")
     return manifest, mf
@@ -173,13 +200,25 @@ def calibrate_probe():
     return float(subprocess.run([PY, "-c", code], capture_output=True, text=True, check=True).stdout.strip())
 
 
+def wait_for_ac(out):
+    """Never time on battery: pause (logging every 10 min) until AC power returns."""
+    t0 = None
+    while "AC Power" not in subprocess.run(["pmset", "-g", "batt"], capture_output=True, text=True).stdout:
+        if t0 is None or time.time() - t0 > 600:
+            log(out, "on battery: paused until AC power is connected")
+            t0 = time.time()
+        time.sleep(30)
+
+
 def run_unit(u, out, probe_ref):
     dst = out / "runs" / f"s{u['session']}-{u['id']}.json"
     if dst.exists():
         return "skip"
-    cmd = [PY, str(HERE / "worker.py"), "--engine", u["engine"], "--kind", u["kind"], "--length", str(u["length"]),
+    wait_for_ac(out)
+    worker_py = PY
+    cmd = [worker_py, str(HERE / "worker.py"), "--engine", u["engine"], "--kind", u["kind"], "--length", str(u["length"]),
            "--variant", str(u["variant"]), "--gen", str(u["gen"]), "--regime", u["regime"],
-           "--probe-ref", str(probe_ref), "--out", str(dst)] + ([] if u["gate"] else ["--no-gate"])
+           "--probe-ref", str(probe_ref), "--out", str(dst)] + ([] if u["gate"] else ["--no-gate"]) + (["--warm-full"] if u.get("warm_full") else [])
     t0 = time.time()
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
@@ -203,13 +242,27 @@ def main():
     g.add_argument("--smoke", action="store_true")
     ap.add_argument("--profile", choices=list(PROFILES), default="quick",
                     help="quick (default, ~2-2.5 h per session), simple (~1 h per session, E0 vs E2 only), "
-                         "or full (PLAN.md sections 5-6, ~10 h per session)")
+                         "full (PLAN.md), or confirm (three engines, 24 pairs; see CONFIRM.md)")
     ap.add_argument("--allow-battery", action="store_true")
     ap.add_argument("--force-unfrozen", action="store_true")
     ap.add_argument("--skip-gate", action="store_true", help="smoke testing only")
+    ap.add_argument("--out", type=Path, help="Separate directory for a new experiment; resume only this directory")
+    ap.add_argument("--dry-run", action="store_true", help="Print fixed schedule without GPU work")
     args = ap.parse_args()
+    if args.skip_gate and not args.smoke:
+        ap.error("--skip-gate is allowed only with --smoke")
+    if args.profile == "confirm" and Path(sys.prefix).name != ".venv-vllm-metal":
+        sys.exit("Use .venv-vllm-metal/bin/python for confirm: all three arms must share one environment.")
     session = 1 if args.smoke else args.session
-    out = HERE / (f"results-smoke-{args.profile}" if args.smoke else f"results-{args.profile}")
+    out = args.out or HERE / (f"results-smoke-{args.profile}" if args.smoke else f"results-{args.profile}")
+    if args.dry_run:
+        units = schedule(session, args.smoke, args.profile)
+        print(json.dumps(dict(profile=args.profile, session=session, units=len(units),
+                              engines=sorted({u["engine"] for u in units}), plan=PROFILES[args.profile]), indent=2))
+        return
+    if "V0" in PROFILES[args.profile].get("engines", []):
+        vp = os.environ.get("VLLM_PYTHON", str(ROOT / ".venv-vllm-metal/bin/python"))
+        subprocess.run([vp, "-c", "import vllm, vllm_metal, mlx_lm"], check=True)
     (out / "runs").mkdir(parents=True, exist_ok=True)
 
     manifest, mf = preflight(out, session, args)
@@ -217,6 +270,7 @@ def main():
     (out / "plan.json").write_text(json.dumps(dict(profile=args.profile, **PROFILES[args.profile]), indent=1))
     # Unattended runs must not depend on the network: use the local HF cache only.
     os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    os.environ["VLLM_ENABLE_V1_MULTIPROCESSING"] = "0"
     caffeinate = subprocess.Popen(["caffeinate", "-dimsu", "-w", str(os.getpid())])
     try:
         if not manifest.get("probe_ref_ms"):
@@ -240,9 +294,16 @@ def main():
             gate = json.loads(gate_file.read_text())
             log(out, f"gate: {'PASS' if gate['all_pass'] else 'FAIL'} "
                      f"{ {k: v['pass'] for k, v in gate['engines'].items()} }")
-            if not gate["engines"].get("E2", {}).get("pass") or gate["unit_tests"]["returncode"]:
-                sys.exit("E2 failed the correctness gate; timing results would be meaningless. Stopping.")
+            if any(not gate["engines"].get(e, {}).get("pass") for e in ("E0", "E2")) or gate["unit_tests"]["returncode"]:
+                sys.exit("E0 or E2 failed the numerical gate; timing results would be meaningless. Stopping.")
 
+        if args.profile == "confirm" and not args.skip_gate:
+            vg = out / f"vllm-gate-s{session}.json"
+            if not vg.exists():
+                subprocess.run([PY, str(HERE / "vllm_gate.py"), "--out", str(vg),
+                                "--probe-ref", str(manifest["probe_ref_ms"]), "--reference-gate", str(gate_file)], check=True)
+            if not json.loads(vg.read_text())["pass"]:
+                sys.exit("vLLM token/FP32 screening failed; inspect vllm-gate before timing.")
         units = schedule(session, args.smoke, args.profile)
         done = sum((out / "runs" / f"s{session}-{u['id']}.json").exists() for u in units)
         log(out, f"{len(units)} units in this session, {done} already done")
@@ -256,13 +317,24 @@ def main():
             remaining = sum(not (out / "runs" / f"s{session}-{x['id']}.json").exists() for x in units[i:])
             log(out, f"[{i}/{len(units)}] {u['id']}: {status}  (ETA {remaining * rate / 3600:.1f} h)")
 
+        # Pre-registered (CONFIRM.md): every excluded unit (gate timeout / worker crash) is
+        # re-run exactly once at the end of the session; the first attempt is kept in
+        # runs/retried/ and is not analysed. A unit excluded twice stays excluded.
+        retry_dir = out / "runs" / "retried"
+        for u in units:
+            dst = out / "runs" / f"s{session}-{u['id']}.json"
+            if dst.exists() and json.loads(dst.read_text()).get("excluded") and not (retry_dir / dst.name).exists():
+                retry_dir.mkdir(exist_ok=True)
+                dst.rename(retry_dir / dst.name)
+                log(out, f"retry once: {u['id']} -> {run_unit(u, out, manifest['probe_ref_ms'])}")
+
         log(out, "judging generated-sequence divergences against FP32")
         subprocess.run([PY, str(HERE / "divergence.py"), "--results", str(out)], check=True)
         log(out, "analysis")
         subprocess.run([PY, str(HERE / "analyze.py"), "--results", str(out)], check=True)
         manifest["finished"] = datetime.now().isoformat()
         mf.write_text(json.dumps(manifest, indent=1))
-        log(out, f"session {session} done -> {out / 'report.md'}")
+        log(out, f"session {session} done -> {out / 'report-corrected.md'}")
     finally:
         caffeinate.terminate()
 

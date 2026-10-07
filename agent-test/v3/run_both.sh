@@ -9,12 +9,12 @@ set -euo pipefail
 
 ROOT=${0:A:h:h:h}
 cd "$ROOT"
-PY=.venv/bin/python
+PY=${BENCH_PYTHON:-.venv/bin/python}
 export HF_HUB_OFFLINE=1     # no network dependency during the unattended run (model is cached)
 GAP_HOURS=${GAP_HOURS:-2}
 PROFILE=quick
 [[ "${1:-}" == "--profile" ]] && PROFILE=$2
-OUT=agent-test/v3/results-$PROFILE
+OUT=${BENCH_OUT:-agent-test/v3/results-$PROFILE}
 mkdir -p "$OUT"
 LOG=$OUT/run_both.log
 
@@ -24,7 +24,7 @@ caffeinate -dimsu -w $$ &
 say_log() { print -r -- "[$(date '+%m-%d %H:%M:%S')] $*" | tee -a "$LOG"; }
 
 say_log "session 1 (profile $PROFILE)"
-$PY agent-test/v3/run.py --session 1 --profile "$PROFILE"
+$PY agent-test/v3/run.py --session 1 --profile "$PROFILE" --out "$OUT"
 
 finished=$($PY -c "import json,sys; print(json.load(open(sys.argv[1])).get('finished',''))" "$OUT/manifest-s1.json")
 if [[ -z "$finished" ]]; then
@@ -40,5 +40,5 @@ say_log "session 1 finished at $finished; waiting ${wait_s}s (${GAP_HOURS} h gap
 sleep "$wait_s"
 
 say_log "session 2 (profile $PROFILE)"
-$PY agent-test/v3/run.py --session 2 --profile "$PROFILE"
-say_log "all done -> $OUT/report.md"
+$PY agent-test/v3/run.py --session 2 --profile "$PROFILE" --out "$OUT"
+say_log "all done -> $OUT/report-corrected.md"

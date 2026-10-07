@@ -63,7 +63,7 @@ def test_prefill_long_prompt_is_compute_bound(model, device):
     b = physical_bound(prefill(model, batch=1, prompt_len=1024), device)
     assert b.bottleneck == "compute"
     p = 1024
-    attn = 4 * 28 * 16 * 128 * (p * (p + 1) // 2)
+    attn = 4 * 16 * 128 * (27 * (p * (p + 1) // 2) + p)
     assert b.workload.flops["attention"] == attn
     assert b.workload.flops["lm_head"] == 2 * model.vocab_size * model.hidden_size
     assert b.to_dict()["ttft_s"] == b.time_s
@@ -79,6 +79,7 @@ def test_measured_overrides_value():
     qty = Quantity(value=120e9, source="datasheet", confidence="medium", measured=95e9)
     assert qty.effective == 95e9
     assert qty.describe()["origin"] == "measured"
+    assert qty.describe()["confidence"] == "medium"
 
 
 def test_real_specs_load(model):
@@ -156,7 +157,7 @@ def test_attention_intensity_cap_values():
 def test_attention_shape_matches_flops(model):
     for w in (decode(model, 2, 4096), prefill(model, 1, 1024)):
         a = w.attention
-        assert 4 * a.scores * a.head_dim * a.count == w.flops["attention"]
+        assert 4 * a.total_scores * a.head_dim == w.flops["attention"]
 
 
 def test_attention_term_binds_only_with_small_on_chip(model, device):
@@ -179,7 +180,7 @@ def test_exp_resource_is_counted_but_does_not_bind(model):
     m4 = load_device(M4)
     b = physical_bound(prefill(model, 1, 32768), m4)
     w = b.workload
-    assert w.special["exp"] == w.attention.scores * w.attention.count
+    assert w.special["exp"] == w.attention.total_scores
     assert "exp" in b.resource_time_s
     assert b.bottleneck == "compute"
     assert b.slack["exp"] > 10

@@ -1,0 +1,1247 @@
+{
+  "analysis": "review_correction_20261007",
+  "new_measurements": false,
+  "interpretation": "calibrated references, not certified hardware limits or attained speeds",
+  "cases": [
+    {
+      "phase": "decode",
+      "length": 512,
+      "historical_full_graph_cold_s": 0.012180475092502434,
+      "corrected_reference_s": 0.012006903602726387,
+      "reference": {
+        "bound": "physical",
+        "interpretation": "calibrated_resource_reference",
+        "hardware_ceiling_certified": false,
+        "computation_scope": "full_product_graph",
+        "assumptions": [
+          "Measured throughput is a calibration, not a certified hardware maximum.",
+          "Traffic assumes explicit KV storage; alternative state representations are not exhausted.",
+          "Resource maximum does not establish an attainable schedule.",
+          "Exp count assumes standard softmax; it is not a universal algorithmic lower bound."
+        ],
+        "phase": "decode",
+        "batch": 1,
+        "engine": "gpu",
+        "dtype": "bf16",
+        "time_s": 0.012006903602726387,
+        "tokens_per_s": 83.28541921273789,
+        "bottleneck": "dram_bandwidth",
+        "resource_time_s": {
+          "compute": 0.0003558800695652174,
+          "dram_bandwidth": 0.012006903602726387,
+          "exp": 4.996173913043479e-07
+        },
+        "slack": {
+          "compute": 33.73862328788278,
+          "dram_bandwidth": 1.0,
+          "exp": 24032.197060594794
+        },
+        "arithmetic_intensity": 1.0620623610727031,
+        "flops": {
+          "linear": 880803840,
+          "attention": 117669888,
+          "lm_head": 311164928
+        },
+        "bytes": {
+          "weights": 1192099840,
+          "embedding_gather": 0,
+          "token_io": 8,
+          "kv_read": 58720256,
+          "kv_write": 114688,
+          "resident_input_credit": -17825792.0
+        },
+        "memory": {
+          "weights": 1192099840,
+          "kv_cache": 58834944,
+          "total": 1250934784,
+          "limit": 19069665280.0,
+          "fits": true
+        },
+        "inputs": {
+          "gpu.compute.bf16": {
+            "value": 3680000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+            "certified_ceiling": false
+          },
+          "gpu.bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+            "certified_ceiling": false
+          },
+          "memory.total_bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "medium",
+            "note": "LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE. Measured 2026-10-04 with benchmarks/contention.py (3 s read windows, best of 3): GPU alone 95.0, CPU alone 46-54, CPU + GPU 89.6-92.0 GB/s. Running both never beats the GPU alone, so these tests did not show a higher combined throughput; this does not certify a DRAM ceiling; `measured` is set to the GPU-alone read bandwidth from benchmarks/bandwidth.py.",
+            "certified_ceiling": false
+          },
+          "gpu.usable_memory": {
+            "value": 19069665280.0,
+            "origin": "system",
+            "confidence": "high",
+            "note": "MLX max_recommended_working_set_size (~17.76 GiB). iogpu.wired_limit_mb is 0 (system default), checked 2026-10-04.",
+            "certified_ceiling": false
+          },
+          "initial_resident_bytes": {
+            "value": 17825792.0,
+            "origin": "modeled_capacity",
+            "confidence": "conditional",
+            "capacity_assumptions": [
+              {
+                "name": "core",
+                "instances": 10,
+                "value": 524288.0,
+                "origin": "estimate",
+                "confidence": "low",
+                "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+                "certified_ceiling": false
+              },
+              {
+                "name": "chip",
+                "instances": 1,
+                "value": 12582912.0,
+                "origin": "measured",
+                "confidence": "low",
+                "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+                "certified_ceiling": false
+              }
+            ]
+          },
+          "gpu.special.exp": {
+            "value": 460000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "exp/s (metal::fast::exp), the softmax resource: one exp per attention score. Measured 2026-10-06 with benchmarks/compute_shapes.py, 8 independent exp+fmul chains per thread; counted as a separate resource (max with FMA time, not added).",
+            "certified_ceiling": false
+          }
+        },
+        "resident_input_credit": 17825792.0,
+        "per_sequence_tokens_per_s": 83.28541921273789
+      },
+      "hypothetical_rate_sensitivity_s": {
+        "bandwidth_120GBs_compute_x1.0": 0.010275908333333333,
+        "bandwidth_120GBs_compute_x1.1": 0.010275908333333333
+      }
+    },
+    {
+      "phase": "decode",
+      "length": 4096,
+      "historical_full_graph_cold_s": 0.016182829444985395,
+      "corrected_reference_s": 0.016009257955209348,
+      "reference": {
+        "bound": "physical",
+        "interpretation": "calibrated_resource_reference",
+        "hardware_ceiling_certified": false,
+        "computation_scope": "full_product_graph",
+        "assumptions": [
+          "Measured throughput is a calibration, not a certified hardware maximum.",
+          "Traffic assumes explicit KV storage; alternative state representations are not exhausted.",
+          "Resource maximum does not establish an attainable schedule.",
+          "Exp count assumes standard softmax; it is not a universal algorithmic lower bound."
+        ],
+        "phase": "decode",
+        "batch": 1,
+        "engine": "gpu",
+        "dtype": "bf16",
+        "time_s": 0.016009257955209348,
+        "tokens_per_s": 62.46385702559087,
+        "bottleneck": "dram_bandwidth",
+        "resource_time_s": {
+          "compute": 0.000579272347826087,
+          "dram_bandwidth": 0.016009257955209348,
+          "exp": 3.990121739130435e-06
+        },
+        "slack": {
+          "compute": 27.63684131529744,
+          "dram_bandwidth": 1.0,
+          "exp": 4012.2229350070497
+        },
+        "arithmetic_intensity": 1.2965491063060595,
+        "flops": {
+          "linear": 880803840,
+          "attention": 939753472,
+          "lm_head": 311164928
+        },
+        "bytes": {
+          "weights": 1192099840,
+          "embedding_gather": 0,
+          "token_io": 8,
+          "kv_read": 469762048,
+          "kv_write": 114688,
+          "resident_input_credit": -17825792.0
+        },
+        "memory": {
+          "weights": 1192099840,
+          "kv_cache": 469876736,
+          "total": 1661976576,
+          "limit": 19069665280.0,
+          "fits": true
+        },
+        "inputs": {
+          "gpu.compute.bf16": {
+            "value": 3680000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+            "certified_ceiling": false
+          },
+          "gpu.bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+            "certified_ceiling": false
+          },
+          "memory.total_bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "medium",
+            "note": "LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE. Measured 2026-10-04 with benchmarks/contention.py (3 s read windows, best of 3): GPU alone 95.0, CPU alone 46-54, CPU + GPU 89.6-92.0 GB/s. Running both never beats the GPU alone, so these tests did not show a higher combined throughput; this does not certify a DRAM ceiling; `measured` is set to the GPU-alone read bandwidth from benchmarks/bandwidth.py.",
+            "certified_ceiling": false
+          },
+          "gpu.usable_memory": {
+            "value": 19069665280.0,
+            "origin": "system",
+            "confidence": "high",
+            "note": "MLX max_recommended_working_set_size (~17.76 GiB). iogpu.wired_limit_mb is 0 (system default), checked 2026-10-04.",
+            "certified_ceiling": false
+          },
+          "initial_resident_bytes": {
+            "value": 17825792.0,
+            "origin": "modeled_capacity",
+            "confidence": "conditional",
+            "capacity_assumptions": [
+              {
+                "name": "core",
+                "instances": 10,
+                "value": 524288.0,
+                "origin": "estimate",
+                "confidence": "low",
+                "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+                "certified_ceiling": false
+              },
+              {
+                "name": "chip",
+                "instances": 1,
+                "value": 12582912.0,
+                "origin": "measured",
+                "confidence": "low",
+                "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+                "certified_ceiling": false
+              }
+            ]
+          },
+          "gpu.special.exp": {
+            "value": 460000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "exp/s (metal::fast::exp), the softmax resource: one exp per attention score. Measured 2026-10-06 with benchmarks/compute_shapes.py, 8 independent exp+fmul chains per thread; counted as a separate resource (max with FMA time, not added).",
+            "certified_ceiling": false
+          }
+        },
+        "resident_input_credit": 17825792.0,
+        "per_sequence_tokens_per_s": 62.46385702559087
+      },
+      "hypothetical_rate_sensitivity_s": {
+        "bandwidth_120GBs_compute_x1.0": 0.0137012566,
+        "bandwidth_120GBs_compute_x1.1": 0.0137012566
+      }
+    },
+    {
+      "phase": "decode",
+      "length": 32768,
+      "historical_full_graph_cold_s": 0.04820166426484908,
+      "corrected_reference_s": 0.04802809277507303,
+      "reference": {
+        "bound": "physical",
+        "interpretation": "calibrated_resource_reference",
+        "hardware_ceiling_certified": false,
+        "computation_scope": "full_product_graph",
+        "assumptions": [
+          "Measured throughput is a calibration, not a certified hardware maximum.",
+          "Traffic assumes explicit KV storage; alternative state representations are not exhausted.",
+          "Resource maximum does not establish an attainable schedule.",
+          "Exp count assumes standard softmax; it is not a universal algorithmic lower bound."
+        ],
+        "phase": "decode",
+        "batch": 1,
+        "engine": "gpu",
+        "dtype": "bf16",
+        "time_s": 0.04802809277507303,
+        "tokens_per_s": 20.821147420598972,
+        "bottleneck": "dram_bandwidth",
+        "resource_time_s": {
+          "compute": 0.0023664105739130436,
+          "dram_bandwidth": 0.04802809277507303,
+          "exp": 3.191415652173913e-05
+        },
+        "slack": {
+          "compute": 20.295756494890423,
+          "dram_bandwidth": 1.0,
+          "exp": 1504.9149972789498
+        },
+        "arithmetic_intensity": 1.7655179257542,
+        "flops": {
+          "linear": 880803840,
+          "attention": 7516422144,
+          "lm_head": 311164928
+        },
+        "bytes": {
+          "weights": 1192099840,
+          "embedding_gather": 0,
+          "token_io": 8,
+          "kv_read": 3758096384,
+          "kv_write": 114688,
+          "resident_input_credit": -17825792.0
+        },
+        "memory": {
+          "weights": 1192099840,
+          "kv_cache": 3758211072,
+          "total": 4950310912,
+          "limit": 19069665280.0,
+          "fits": true
+        },
+        "inputs": {
+          "gpu.compute.bf16": {
+            "value": 3680000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+            "certified_ceiling": false
+          },
+          "gpu.bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+            "certified_ceiling": false
+          },
+          "memory.total_bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "medium",
+            "note": "LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE. Measured 2026-10-04 with benchmarks/contention.py (3 s read windows, best of 3): GPU alone 95.0, CPU alone 46-54, CPU + GPU 89.6-92.0 GB/s. Running both never beats the GPU alone, so these tests did not show a higher combined throughput; this does not certify a DRAM ceiling; `measured` is set to the GPU-alone read bandwidth from benchmarks/bandwidth.py.",
+            "certified_ceiling": false
+          },
+          "gpu.usable_memory": {
+            "value": 19069665280.0,
+            "origin": "system",
+            "confidence": "high",
+            "note": "MLX max_recommended_working_set_size (~17.76 GiB). iogpu.wired_limit_mb is 0 (system default), checked 2026-10-04.",
+            "certified_ceiling": false
+          },
+          "initial_resident_bytes": {
+            "value": 17825792.0,
+            "origin": "modeled_capacity",
+            "confidence": "conditional",
+            "capacity_assumptions": [
+              {
+                "name": "core",
+                "instances": 10,
+                "value": 524288.0,
+                "origin": "estimate",
+                "confidence": "low",
+                "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+                "certified_ceiling": false
+              },
+              {
+                "name": "chip",
+                "instances": 1,
+                "value": 12582912.0,
+                "origin": "measured",
+                "confidence": "low",
+                "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+                "certified_ceiling": false
+              }
+            ]
+          },
+          "gpu.special.exp": {
+            "value": 460000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "exp/s (metal::fast::exp), the softmax resource: one exp per attention score. Measured 2026-10-06 with benchmarks/compute_shapes.py, 8 independent exp+fmul chains per thread; counted as a separate resource (max with FMA time, not added).",
+            "certified_ceiling": false
+          }
+        },
+        "resident_input_credit": 17825792.0,
+        "per_sequence_tokens_per_s": 20.821147420598972
+      },
+      "hypothetical_rate_sensitivity_s": {
+        "bandwidth_120GBs_compute_x1.0": 0.04110404273333333,
+        "bandwidth_120GBs_compute_x1.1": 0.04110404273333333
+      }
+    },
+    {
+      "phase": "prefill",
+      "length": 16,
+      "historical_full_graph_cold_s": 0.011625461694255112,
+      "corrected_reference_s": 0.011451890204479065,
+      "reference": {
+        "bound": "physical",
+        "interpretation": "calibrated_resource_reference",
+        "hardware_ceiling_certified": false,
+        "computation_scope": "useful_product_graph",
+        "assumptions": [
+          "Measured throughput is a calibration, not a certified hardware maximum.",
+          "Traffic assumes explicit KV storage; alternative state representations are not exhausted.",
+          "Resource maximum does not establish an attainable schedule.",
+          "Exp count assumes standard softmax; it is not a universal algorithmic lower bound."
+        ],
+        "phase": "prefill",
+        "batch": 1,
+        "engine": "gpu",
+        "dtype": "bf16",
+        "time_s": 0.011451890204479065,
+        "tokens_per_s": 1397.1492665675469,
+        "bottleneck": "dram_bandwidth",
+        "resource_time_s": {
+          "compute": 0.003811221147826087,
+          "dram_bandwidth": 0.011451890204479065,
+          "exp": 1.282782608695652e-07
+        },
+        "slack": {
+          "compute": 3.004782393960844,
+          "dram_bandwidth": 1.0,
+          "exp": 89273.81870357189
+        },
+        "arithmetic_intensity": 11.92516369254865,
+        "flops": {
+          "linear": 13683916800,
+          "attention": 30212096,
+          "lm_head": 311164928
+        },
+        "bytes": {
+          "weights": 1192099840,
+          "embedding_gather": 0,
+          "token_io": 68,
+          "kv_read": 0,
+          "kv_write": 1835008,
+          "resident_input_credit": -17825792.0
+        },
+        "memory": {
+          "weights": 1192099840,
+          "kv_cache": 1835008,
+          "total": 1193934848,
+          "limit": 19069665280.0,
+          "fits": true
+        },
+        "inputs": {
+          "gpu.compute.bf16": {
+            "value": 3680000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+            "certified_ceiling": false
+          },
+          "gpu.bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+            "certified_ceiling": false
+          },
+          "memory.total_bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "medium",
+            "note": "LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE. Measured 2026-10-04 with benchmarks/contention.py (3 s read windows, best of 3): GPU alone 95.0, CPU alone 46-54, CPU + GPU 89.6-92.0 GB/s. Running both never beats the GPU alone, so these tests did not show a higher combined throughput; this does not certify a DRAM ceiling; `measured` is set to the GPU-alone read bandwidth from benchmarks/bandwidth.py.",
+            "certified_ceiling": false
+          },
+          "gpu.usable_memory": {
+            "value": 19069665280.0,
+            "origin": "system",
+            "confidence": "high",
+            "note": "MLX max_recommended_working_set_size (~17.76 GiB). iogpu.wired_limit_mb is 0 (system default), checked 2026-10-04.",
+            "certified_ceiling": false
+          },
+          "initial_resident_bytes": {
+            "value": 17825792.0,
+            "origin": "modeled_capacity",
+            "confidence": "conditional",
+            "capacity_assumptions": [
+              {
+                "name": "core",
+                "instances": 10,
+                "value": 524288.0,
+                "origin": "estimate",
+                "confidence": "low",
+                "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+                "certified_ceiling": false
+              },
+              {
+                "name": "chip",
+                "instances": 1,
+                "value": 12582912.0,
+                "origin": "measured",
+                "confidence": "low",
+                "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+                "certified_ceiling": false
+              }
+            ]
+          },
+          "gpu.special.exp": {
+            "value": 460000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "exp/s (metal::fast::exp), the softmax resource: one exp per attention score. Measured 2026-10-06 with benchmarks/compute_shapes.py, 8 independent exp+fmul chains per thread; counted as a separate resource (max with FMA time, not added).",
+            "certified_ceiling": false
+          }
+        },
+        "resident_input_credit": 17825792.0,
+        "ttft_s": 0.011451890204479065
+      },
+      "hypothetical_rate_sensitivity_s": {
+        "bandwidth_120GBs_compute_x1.0": 0.009800909366666668,
+        "bandwidth_120GBs_compute_x1.1": 0.009800909366666668
+      }
+    },
+    {
+      "phase": "prefill",
+      "length": 64,
+      "historical_full_graph_cold_s": 0.015532530643478261,
+      "corrected_reference_s": 0.015061312556521739,
+      "reference": {
+        "bound": "physical",
+        "interpretation": "calibrated_resource_reference",
+        "hardware_ceiling_certified": false,
+        "computation_scope": "useful_product_graph",
+        "assumptions": [
+          "Measured throughput is a calibration, not a certified hardware maximum.",
+          "Traffic assumes explicit KV storage; alternative state representations are not exhausted.",
+          "Resource maximum does not establish an attainable schedule.",
+          "Exp count assumes standard softmax; it is not a universal algorithmic lower bound."
+        ],
+        "phase": "prefill",
+        "batch": 1,
+        "engine": "gpu",
+        "dtype": "bf16",
+        "time_s": 0.015061312556521739,
+        "tokens_per_s": 4249.297646524651,
+        "bottleneck": "compute",
+        "resource_time_s": {
+          "compute": 0.015061312556521739,
+          "dram_bandwidth": 0.011505495034079844,
+          "exp": 1.955617391304348e-06
+        },
+        "slack": {
+          "compute": 1.0,
+          "dram_bandwidth": 1.3090538487835064,
+          "exp": 7701.564029595902
+        },
+        "arithmetic_intensity": 46.90670071590363,
+        "flops": {
+          "linear": 54653878272,
+          "attention": 460587008,
+          "lm_head": 311164928
+        },
+        "bytes": {
+          "weights": 1192099840,
+          "embedding_gather": 0,
+          "token_io": 260,
+          "kv_read": 0,
+          "kv_write": 7340032,
+          "resident_input_credit": -17825792.0
+        },
+        "memory": {
+          "weights": 1192099840,
+          "kv_cache": 7340032,
+          "total": 1199439872,
+          "limit": 19069665280.0,
+          "fits": true
+        },
+        "inputs": {
+          "gpu.compute.bf16": {
+            "value": 3680000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+            "certified_ceiling": false
+          },
+          "gpu.bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+            "certified_ceiling": false
+          },
+          "memory.total_bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "medium",
+            "note": "LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE. Measured 2026-10-04 with benchmarks/contention.py (3 s read windows, best of 3): GPU alone 95.0, CPU alone 46-54, CPU + GPU 89.6-92.0 GB/s. Running both never beats the GPU alone, so these tests did not show a higher combined throughput; this does not certify a DRAM ceiling; `measured` is set to the GPU-alone read bandwidth from benchmarks/bandwidth.py.",
+            "certified_ceiling": false
+          },
+          "gpu.usable_memory": {
+            "value": 19069665280.0,
+            "origin": "system",
+            "confidence": "high",
+            "note": "MLX max_recommended_working_set_size (~17.76 GiB). iogpu.wired_limit_mb is 0 (system default), checked 2026-10-04.",
+            "certified_ceiling": false
+          },
+          "initial_resident_bytes": {
+            "value": 17825792.0,
+            "origin": "modeled_capacity",
+            "confidence": "conditional",
+            "capacity_assumptions": [
+              {
+                "name": "core",
+                "instances": 10,
+                "value": 524288.0,
+                "origin": "estimate",
+                "confidence": "low",
+                "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+                "certified_ceiling": false
+              },
+              {
+                "name": "chip",
+                "instances": 1,
+                "value": 12582912.0,
+                "origin": "measured",
+                "confidence": "low",
+                "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+                "certified_ceiling": false
+              }
+            ]
+          },
+          "gpu.special.exp": {
+            "value": 460000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "exp/s (metal::fast::exp), the softmax resource: one exp per attention score. Measured 2026-10-06 with benchmarks/compute_shapes.py, 8 independent exp+fmul chains per thread; counted as a separate resource (max with FMA time, not added).",
+            "certified_ceiling": false
+          }
+        },
+        "resident_input_credit": 17825792.0,
+        "ttft_s": 0.015061312556521739
+      },
+      "hypothetical_rate_sensitivity_s": {
+        "bandwidth_120GBs_compute_x1.0": 0.015061312556521739,
+        "bandwidth_120GBs_compute_x1.1": 0.01369210232411067
+      }
+    },
+    {
+      "phase": "prefill",
+      "length": 256,
+      "historical_full_graph_cold_s": 0.06340828827826087,
+      "corrected_reference_s": 0.061446482365217395,
+      "reference": {
+        "bound": "physical",
+        "interpretation": "calibrated_resource_reference",
+        "hardware_ceiling_certified": false,
+        "computation_scope": "useful_product_graph",
+        "assumptions": [
+          "Measured throughput is a calibration, not a certified hardware maximum.",
+          "Traffic assumes explicit KV storage; alternative state representations are not exhausted.",
+          "Resource maximum does not establish an attainable schedule.",
+          "Exp count assumes standard softmax; it is not a universal algorithmic lower bound."
+        ],
+        "phase": "prefill",
+        "batch": 1,
+        "engine": "gpu",
+        "dtype": "bf16",
+        "time_s": 0.061446482365217395,
+        "tokens_per_s": 4166.227099517616,
+        "bottleneck": "compute",
+        "resource_time_s": {
+          "compute": 0.061446482365217395,
+          "dram_bandwidth": 0.011719914352482961,
+          "exp": 3.0902539130434784e-05
+        },
+        "slack": {
+          "compute": 1.0,
+          "dram_bandwidth": 5.242912236146116,
+          "exp": 1988.3959083705518
+        },
+        "arithmetic_intensity": 187.86676756589782,
+        "flops": {
+          "linear": 218533724160,
+          "attention": 7278166016,
+          "lm_head": 311164928
+        },
+        "bytes": {
+          "weights": 1192099840,
+          "embedding_gather": 0,
+          "token_io": 1028,
+          "kv_read": 0,
+          "kv_write": 29360128,
+          "resident_input_credit": -17825792.0
+        },
+        "memory": {
+          "weights": 1192099840,
+          "kv_cache": 29360128,
+          "total": 1221459968,
+          "limit": 19069665280.0,
+          "fits": true
+        },
+        "inputs": {
+          "gpu.compute.bf16": {
+            "value": 3680000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+            "certified_ceiling": false
+          },
+          "gpu.bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+            "certified_ceiling": false
+          },
+          "memory.total_bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "medium",
+            "note": "LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE. Measured 2026-10-04 with benchmarks/contention.py (3 s read windows, best of 3): GPU alone 95.0, CPU alone 46-54, CPU + GPU 89.6-92.0 GB/s. Running both never beats the GPU alone, so these tests did not show a higher combined throughput; this does not certify a DRAM ceiling; `measured` is set to the GPU-alone read bandwidth from benchmarks/bandwidth.py.",
+            "certified_ceiling": false
+          },
+          "gpu.usable_memory": {
+            "value": 19069665280.0,
+            "origin": "system",
+            "confidence": "high",
+            "note": "MLX max_recommended_working_set_size (~17.76 GiB). iogpu.wired_limit_mb is 0 (system default), checked 2026-10-04.",
+            "certified_ceiling": false
+          },
+          "initial_resident_bytes": {
+            "value": 17825792.0,
+            "origin": "modeled_capacity",
+            "confidence": "conditional",
+            "capacity_assumptions": [
+              {
+                "name": "core",
+                "instances": 10,
+                "value": 524288.0,
+                "origin": "estimate",
+                "confidence": "low",
+                "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+                "certified_ceiling": false
+              },
+              {
+                "name": "chip",
+                "instances": 1,
+                "value": 12582912.0,
+                "origin": "measured",
+                "confidence": "low",
+                "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+                "certified_ceiling": false
+              }
+            ]
+          },
+          "gpu.special.exp": {
+            "value": 460000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "exp/s (metal::fast::exp), the softmax resource: one exp per attention score. Measured 2026-10-06 with benchmarks/compute_shapes.py, 8 independent exp+fmul chains per thread; counted as a separate resource (max with FMA time, not added).",
+            "certified_ceiling": false
+          }
+        },
+        "resident_input_credit": 17825792.0,
+        "ttft_s": 0.061446482365217395
+      },
+      "hypothetical_rate_sensitivity_s": {
+        "bandwidth_120GBs_compute_x1.0": 0.061446482365217395,
+        "bandwidth_120GBs_compute_x1.1": 0.05586043851383399
+      }
+    },
+    {
+      "phase": "prefill",
+      "length": 1024,
+      "historical_full_graph_cold_s": 0.27788881029565216,
+      "corrected_reference_s": 0.2691440283826087,
+      "reference": {
+        "bound": "physical",
+        "interpretation": "calibrated_resource_reference",
+        "hardware_ceiling_certified": false,
+        "computation_scope": "useful_product_graph",
+        "assumptions": [
+          "Measured throughput is a calibration, not a certified hardware maximum.",
+          "Traffic assumes explicit KV storage; alternative state representations are not exhausted.",
+          "Resource maximum does not establish an attainable schedule.",
+          "Exp count assumes standard softmax; it is not a universal algorithmic lower bound."
+        ],
+        "phase": "prefill",
+        "batch": 1,
+        "engine": "gpu",
+        "dtype": "bf16",
+        "time_s": 0.2691440283826087,
+        "tokens_per_s": 3804.6543560844166,
+        "bottleneck": "compute",
+        "resource_time_s": {
+          "compute": 0.2691440283826087,
+          "dram_bandwidth": 0.012577591626095423,
+          "exp": 0.0004928912695652173
+        },
+        "slack": {
+          "compute": 1.0,
+          "dram_bandwidth": 21.398693516507624,
+          "exp": 546.0515229251725
+        },
+        "arithmetic_intensity": 766.7691542429216,
+        "flops": {
+          "linear": 874053107712,
+          "attention": 116085751808,
+          "lm_head": 311164928
+        },
+        "bytes": {
+          "weights": 1192099840,
+          "embedding_gather": 0,
+          "token_io": 4100,
+          "kv_read": 0,
+          "kv_write": 117440512,
+          "resident_input_credit": -17825792.0
+        },
+        "memory": {
+          "weights": 1192099840,
+          "kv_cache": 117440512,
+          "total": 1309540352,
+          "limit": 19069665280.0,
+          "fits": true
+        },
+        "inputs": {
+          "gpu.compute.bf16": {
+            "value": 3680000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+            "certified_ceiling": false
+          },
+          "gpu.bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+            "certified_ceiling": false
+          },
+          "memory.total_bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "medium",
+            "note": "LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE. Measured 2026-10-04 with benchmarks/contention.py (3 s read windows, best of 3): GPU alone 95.0, CPU alone 46-54, CPU + GPU 89.6-92.0 GB/s. Running both never beats the GPU alone, so these tests did not show a higher combined throughput; this does not certify a DRAM ceiling; `measured` is set to the GPU-alone read bandwidth from benchmarks/bandwidth.py.",
+            "certified_ceiling": false
+          },
+          "gpu.usable_memory": {
+            "value": 19069665280.0,
+            "origin": "system",
+            "confidence": "high",
+            "note": "MLX max_recommended_working_set_size (~17.76 GiB). iogpu.wired_limit_mb is 0 (system default), checked 2026-10-04.",
+            "certified_ceiling": false
+          },
+          "initial_resident_bytes": {
+            "value": 17825792.0,
+            "origin": "modeled_capacity",
+            "confidence": "conditional",
+            "capacity_assumptions": [
+              {
+                "name": "core",
+                "instances": 10,
+                "value": 524288.0,
+                "origin": "estimate",
+                "confidence": "low",
+                "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+                "certified_ceiling": false
+              },
+              {
+                "name": "chip",
+                "instances": 1,
+                "value": 12582912.0,
+                "origin": "measured",
+                "confidence": "low",
+                "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+                "certified_ceiling": false
+              }
+            ]
+          },
+          "gpu.special.exp": {
+            "value": 460000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "exp/s (metal::fast::exp), the softmax resource: one exp per attention score. Measured 2026-10-06 with benchmarks/compute_shapes.py, 8 independent exp+fmul chains per thread; counted as a separate resource (max with FMA time, not added).",
+            "certified_ceiling": false
+          }
+        },
+        "resident_input_credit": 17825792.0,
+        "ttft_s": 0.2691440283826087
+      },
+      "hypothetical_rate_sensitivity_s": {
+        "bandwidth_120GBs_compute_x1.0": 0.2691440283826087,
+        "bandwidth_120GBs_compute_x1.1": 0.24467638943873515
+      }
+    },
+    {
+      "phase": "prefill",
+      "length": 4096,
+      "historical_full_graph_cold_s": 1.5034507620173914,
+      "corrected_reference_s": 1.454444080973913,
+      "reference": {
+        "bound": "physical",
+        "interpretation": "calibrated_resource_reference",
+        "hardware_ceiling_certified": false,
+        "computation_scope": "useful_product_graph",
+        "assumptions": [
+          "Measured throughput is a calibration, not a certified hardware maximum.",
+          "Traffic assumes explicit KV storage; alternative state representations are not exhausted.",
+          "Resource maximum does not establish an attainable schedule.",
+          "Exp count assumes standard softmax; it is not a universal algorithmic lower bound."
+        ],
+        "phase": "prefill",
+        "batch": 1,
+        "engine": "gpu",
+        "dtype": "bf16",
+        "time_s": 1.454444080973913,
+        "tokens_per_s": 2816.196272913614,
+        "bottleneck": "compute",
+        "resource_time_s": {
+          "compute": 1.454444080973913,
+          "dram_bandwidth": 0.016008300720545276,
+          "exp": 0.007880062886956522
+        },
+        "slack": {
+          "compute": 1.0,
+          "dram_bandwidth": 90.85561961659424,
+          "exp": 184.57264895453844
+        },
+        "arithmetic_intensity": 3255.585980419345,
+        "flops": {
+          "linear": 3496130641920,
+          "attention": 1855912411136,
+          "lm_head": 311164928
+        },
+        "bytes": {
+          "weights": 1192099840,
+          "embedding_gather": 0,
+          "token_io": 16388,
+          "kv_read": 0,
+          "kv_write": 469762048,
+          "resident_input_credit": -17825792.0
+        },
+        "memory": {
+          "weights": 1192099840,
+          "kv_cache": 469762048,
+          "total": 1661861888,
+          "limit": 19069665280.0,
+          "fits": true
+        },
+        "inputs": {
+          "gpu.compute.bf16": {
+            "value": 3680000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+            "certified_ceiling": false
+          },
+          "gpu.bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+            "certified_ceiling": false
+          },
+          "memory.total_bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "medium",
+            "note": "LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE. Measured 2026-10-04 with benchmarks/contention.py (3 s read windows, best of 3): GPU alone 95.0, CPU alone 46-54, CPU + GPU 89.6-92.0 GB/s. Running both never beats the GPU alone, so these tests did not show a higher combined throughput; this does not certify a DRAM ceiling; `measured` is set to the GPU-alone read bandwidth from benchmarks/bandwidth.py.",
+            "certified_ceiling": false
+          },
+          "gpu.usable_memory": {
+            "value": 19069665280.0,
+            "origin": "system",
+            "confidence": "high",
+            "note": "MLX max_recommended_working_set_size (~17.76 GiB). iogpu.wired_limit_mb is 0 (system default), checked 2026-10-04.",
+            "certified_ceiling": false
+          },
+          "initial_resident_bytes": {
+            "value": 17825792.0,
+            "origin": "modeled_capacity",
+            "confidence": "conditional",
+            "capacity_assumptions": [
+              {
+                "name": "core",
+                "instances": 10,
+                "value": 524288.0,
+                "origin": "estimate",
+                "confidence": "low",
+                "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+                "certified_ceiling": false
+              },
+              {
+                "name": "chip",
+                "instances": 1,
+                "value": 12582912.0,
+                "origin": "measured",
+                "confidence": "low",
+                "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+                "certified_ceiling": false
+              }
+            ]
+          },
+          "gpu.special.exp": {
+            "value": 460000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "exp/s (metal::fast::exp), the softmax resource: one exp per attention score. Measured 2026-10-06 with benchmarks/compute_shapes.py, 8 independent exp+fmul chains per thread; counted as a separate resource (max with FMA time, not added).",
+            "certified_ceiling": false
+          }
+        },
+        "resident_input_credit": 17825792.0,
+        "ttft_s": 1.454444080973913
+      },
+      "hypothetical_rate_sensitivity_s": {
+        "bandwidth_120GBs_compute_x1.0": 1.454444080973913,
+        "bandwidth_120GBs_compute_x1.1": 1.3222218917944661
+      }
+    },
+    {
+      "phase": "prefill",
+      "length": 16384,
+      "historical_full_graph_cold_s": 12.28793638733913,
+      "corrected_reference_s": 11.867802187686957,
+      "reference": {
+        "bound": "physical",
+        "interpretation": "calibrated_resource_reference",
+        "hardware_ceiling_certified": false,
+        "computation_scope": "useful_product_graph",
+        "assumptions": [
+          "Measured throughput is a calibration, not a certified hardware maximum.",
+          "Traffic assumes explicit KV storage; alternative state representations are not exhausted.",
+          "Resource maximum does not establish an attainable schedule.",
+          "Exp count assumes standard softmax; it is not a universal algorithmic lower bound."
+        ],
+        "phase": "prefill",
+        "batch": 1,
+        "engine": "gpu",
+        "dtype": "bf16",
+        "time_s": 11.867802187686957,
+        "tokens_per_s": 1380.5420532707121,
+        "bottleneck": "compute",
+        "resource_time_s": {
+          "compute": 11.867802187686957,
+          "dram_bandwidth": 0.029731137098344695,
+          "exp": 0.12605621648695653
+        },
+        "slack": {
+          "compute": 1.0,
+          "dram_bandwidth": 399.17081369712247,
+          "exp": 94.14690142564258
+        },
+        "arithmetic_intensity": 14303.296927024448,
+        "flops": {
+          "linear": 13984440778752,
+          "attention": 29688760107008,
+          "lm_head": 311164928
+        },
+        "bytes": {
+          "weights": 1192099840,
+          "embedding_gather": 0,
+          "token_io": 65540,
+          "kv_read": 0,
+          "kv_write": 1879048192,
+          "resident_input_credit": -17825792.0
+        },
+        "memory": {
+          "weights": 1192099840,
+          "kv_cache": 1879048192,
+          "total": 3071148032,
+          "limit": 19069665280.0,
+          "fits": true
+        },
+        "inputs": {
+          "gpu.compute.bf16": {
+            "value": 3680000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+            "certified_ceiling": false
+          },
+          "gpu.bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+            "certified_ceiling": false
+          },
+          "memory.total_bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "medium",
+            "note": "LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE. Measured 2026-10-04 with benchmarks/contention.py (3 s read windows, best of 3): GPU alone 95.0, CPU alone 46-54, CPU + GPU 89.6-92.0 GB/s. Running both never beats the GPU alone, so these tests did not show a higher combined throughput; this does not certify a DRAM ceiling; `measured` is set to the GPU-alone read bandwidth from benchmarks/bandwidth.py.",
+            "certified_ceiling": false
+          },
+          "gpu.usable_memory": {
+            "value": 19069665280.0,
+            "origin": "system",
+            "confidence": "high",
+            "note": "MLX max_recommended_working_set_size (~17.76 GiB). iogpu.wired_limit_mb is 0 (system default), checked 2026-10-04.",
+            "certified_ceiling": false
+          },
+          "initial_resident_bytes": {
+            "value": 17825792.0,
+            "origin": "modeled_capacity",
+            "confidence": "conditional",
+            "capacity_assumptions": [
+              {
+                "name": "core",
+                "instances": 10,
+                "value": 524288.0,
+                "origin": "estimate",
+                "confidence": "low",
+                "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+                "certified_ceiling": false
+              },
+              {
+                "name": "chip",
+                "instances": 1,
+                "value": 12582912.0,
+                "origin": "measured",
+                "confidence": "low",
+                "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+                "certified_ceiling": false
+              }
+            ]
+          },
+          "gpu.special.exp": {
+            "value": 460000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "exp/s (metal::fast::exp), the softmax resource: one exp per attention score. Measured 2026-10-06 with benchmarks/compute_shapes.py, 8 independent exp+fmul chains per thread; counted as a separate resource (max with FMA time, not added).",
+            "certified_ceiling": false
+          }
+        },
+        "resident_input_credit": 17825792.0,
+        "ttft_s": 11.867802187686957
+      },
+      "hypothetical_rate_sensitivity_s": {
+        "bandwidth_120GBs_compute_x1.0": 11.867802187686957,
+        "bandwidth_120GBs_compute_x1.1": 10.788911079715414
+      }
+    },
+    {
+      "phase": "prefill",
+      "length": 32768,
+      "historical_full_graph_cold_s": 41.30748690253913,
+      "corrected_reference_s": 39.869650427547825,
+      "reference": {
+        "bound": "physical",
+        "interpretation": "calibrated_resource_reference",
+        "hardware_ceiling_certified": false,
+        "computation_scope": "useful_product_graph",
+        "assumptions": [
+          "Measured throughput is a calibration, not a certified hardware maximum.",
+          "Traffic assumes explicit KV storage; alternative state representations are not exhausted.",
+          "Resource maximum does not establish an attainable schedule.",
+          "Exp count assumes standard softmax; it is not a universal algorithmic lower bound."
+        ],
+        "phase": "prefill",
+        "batch": 1,
+        "engine": "gpu",
+        "dtype": "bf16",
+        "time_s": 39.869650427547825,
+        "tokens_per_s": 821.8782870832256,
+        "bottleneck": "compute",
+        "resource_time_s": {
+          "compute": 39.869650427547825,
+          "dram_bandwidth": 0.048028252268743916,
+          "exp": 0.5042083394782608
+        },
+        "slack": {
+          "compute": 1.0,
+          "dram_bandwidth": 830.1291124327339,
+          "exp": 79.07376238323171
+        },
+        "arithmetic_intensity": 29745.619608105753,
+        "flops": {
+          "linear": 27968854294528,
+          "attention": 118751148113920,
+          "lm_head": 311164928
+        },
+        "bytes": {
+          "weights": 1192099840,
+          "embedding_gather": 0,
+          "token_io": 131076,
+          "kv_read": 0,
+          "kv_write": 3758096384,
+          "resident_input_credit": -17825792.0
+        },
+        "memory": {
+          "weights": 1192099840,
+          "kv_cache": 3758096384,
+          "total": 4950196224,
+          "limit": 19069665280.0,
+          "fits": true
+        },
+        "inputs": {
+          "gpu.compute.bf16": {
+            "value": 3680000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "10 cores x 128 ALUs x 2 FLOP x ~1.58 GHz. No tensor cores on M4. Measured 2026-10-04 with benchmarks/compute.py: FMA-chain kernel, best of 20 (fp16 3.71). mx.matmul bf16 reaches 3.01-3.13 (n = 1024-8192). Short runs: burst, not sustained.",
+            "certified_ceiling": false
+          },
+          "gpu.bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "GPU-alone achievable bandwidth; upper-bounded by total_bandwidth. Measured 2026-10-03 with benchmarks/bandwidth.py, 1 GiB buffer, best of 20 (median 102.2). Write 94.9, copy 95.0 GB/s. Reads of 1-2 MiB reach ~250 GB/s; from 8 MiB up it is DRAM speed.",
+            "certified_ceiling": false
+          },
+          "memory.total_bandwidth": {
+            "value": 102700000000.0,
+            "origin": "measured",
+            "confidence": "medium",
+            "note": "LPDDR5X-7500, 128-bit; shared by CPU, GPU and ANE. Measured 2026-10-04 with benchmarks/contention.py (3 s read windows, best of 3): GPU alone 95.0, CPU alone 46-54, CPU + GPU 89.6-92.0 GB/s. Running both never beats the GPU alone, so these tests did not show a higher combined throughput; this does not certify a DRAM ceiling; `measured` is set to the GPU-alone read bandwidth from benchmarks/bandwidth.py.",
+            "certified_ceiling": false
+          },
+          "gpu.usable_memory": {
+            "value": 19069665280.0,
+            "origin": "system",
+            "confidence": "high",
+            "note": "MLX max_recommended_working_set_size (~17.76 GiB). iogpu.wired_limit_mb is 0 (system default), checked 2026-10-04.",
+            "certified_ceiling": false
+          },
+          "initial_resident_bytes": {
+            "value": 17825792.0,
+            "origin": "modeled_capacity",
+            "confidence": "conditional",
+            "capacity_assumptions": [
+              {
+                "name": "core",
+                "instances": 10,
+                "value": 524288.0,
+                "origin": "estimate",
+                "confidence": "low",
+                "note": "Per-core on-chip SRAM: registers, threadgroup memory and cache. Since M3 (Dynamic Caching) these share one memory per core; Apple does not publish its size. benchmarks/hierarchy.py (2026-10-06): with one threadgroup per core, buffers up to 128-176 KiB are served at ~1.35 TB/s; with four groups per core the visible cache drops below 48 KiB, i.e. registers take the same SRAM. 512 KiB is a deliberate upper estimate (about 2x the largest observed cache), not a measurement.",
+                "certified_ceiling": false
+              },
+              {
+                "name": "chip",
+                "instances": 1,
+                "value": 12582912.0,
+                "origin": "measured",
+                "confidence": "low",
+                "note": "Bytes of on-chip storage the GPU sees between DRAM and its cores (GPU L2 plus system level cache), the M of the red-blue pebble bound. Unpublished; the estimate is the commonly reported 8 MB SLC. Measured 2026-10-04 with benchmarks/bandwidth.py --sweep-per-octave 4: reads stay at ~230 GB/s up to 2.4 MiB, fall gradually, and reach DRAM speed (~95 GB/s) at 11.3 MiB. `measured` takes the upper edge, rounded up to 12 MiB: a larger assumed M weakens the lower bound. The chosen upper edge is not a certified upper bound on physical capacity, so validity is conditional.",
+                "certified_ceiling": false
+              }
+            ]
+          },
+          "gpu.special.exp": {
+            "value": 460000000000.0,
+            "origin": "measured",
+            "confidence": "low",
+            "note": "exp/s (metal::fast::exp), the softmax resource: one exp per attention score. Measured 2026-10-06 with benchmarks/compute_shapes.py, 8 independent exp+fmul chains per thread; counted as a separate resource (max with FMA time, not added).",
+            "certified_ceiling": false
+          }
+        },
+        "resident_input_credit": 17825792.0,
+        "ttft_s": 39.869650427547825
+      },
+      "hypothetical_rate_sensitivity_s": {
+        "bandwidth_120GBs_compute_x1.0": 39.869650427547825,
+        "bandwidth_120GBs_compute_x1.1": 36.2451367523162
+      }
+    }
+  ]
+}

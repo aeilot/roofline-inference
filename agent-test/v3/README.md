@@ -1,6 +1,6 @@
 # v3 自动化验证：使用说明
 
-方案与判据见 [PLAN.md](PLAN.md)。整个流程无人值守、可以中断后续跑，结束时自动生成报告。
+方案与判据见 [PLAN.md](PLAN.md)，采集后修订见第 16 节。原冻结脚本为 analyze_preregistered.py；已有数据的修订检验是探索性的，新的独立采集需要先冻结新方案。整个流程无人值守、可以中断后续跑，结束时自动生成报告。
 
 ## 运行前
 
@@ -44,14 +44,14 @@ agent-test/v3/run_both.sh
 
 两个时段都跑完后：
 
-- `results-quick/report.md`：结论表（"更快 / 等价 / 未定 / 作废"）、归因、消融、延续性检验、数据质量；
-- `results-quick/summary.json`：同样的内容，机器可读；
+- `results-quick/report-corrected.md`：修订分析（条件性中位数检验／未定／作废）、边际消融、延续性描述、数据质量；
+- `results-quick/summary-corrected.json`：同样的内容，机器可读；原 report.md / summary.json 保留。
 - `results-quick/runs/*.json`：每一次计时的原始记录（包括被排除的）；
 - `results-quick/manifest-s*.json`：环境、代码哈希、探针基准；
 - `results-quick/gate-s*.json`：正确性门槛的结果；
 - `results-quick/divergence_records.json`：每一处生成序列分叉及其 FP32 判定。
 
-只跑完一个时段时，也会生成报告，但所有"更快"都会标为"单时段，暂定"。
+只跑完一个时段时也会生成描述报告，但不作跨时段的“更快”判定。
 
 ## 流程
 
@@ -64,7 +64,7 @@ run.py（父进程，不加载模型）
  │    加载模型 → 预热 → 等 thermalState=0 且探针恢复 → idle 空等 2 s / warm 预热负载 → 计时 → 同步引擎的 stream → 写 JSON
  │    顺序：main/idle → main/warm → 延续性检验 → 消融；每个区组内随机，种子固定
  ├─ divergence.py：对生成序列的每一处分叉，用 FP32 前向判断是否为近似平局
- └─ analyze.py：事先冻结的分析，生成 report.md 与 summary.json
+ └─ analyze.py：修订分析，生成 report-corrected.md 与 summary-corrected.json
 ```
 
 冒烟测试（约 30–40 分钟，输出到 `results-smoke-quick/`，不进入正式分析）：
@@ -72,3 +72,8 @@ run.py（父进程，不加载模型）
 ```sh
 .venv/bin/python agent-test/v3/run.py --smoke
 ```
+
+## 新的三组验证
+
+下一次采集使用 `confirm`；原生 mlx-lm / agent-engine / 官方 vLLM Metal。
+方案、解释边界和启动命令见 [CONFIRM.md](CONFIRM.md)。不得复用历史 results-simple。

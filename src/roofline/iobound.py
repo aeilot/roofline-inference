@@ -10,7 +10,7 @@ fused     Any implementation allowed at level A (design notes 9: every product
           and recomputation free). The larger of compulsory traffic (every
           used input element crosses once, every output once, minus what may
           already sit in fast memory, P * S) and the fused pebble bound below
-          (design notes 6.12).
+          (design notes 6.12), excluded by default pending proof review.
 
 operator  Every contraction and every attention is its own operator whose
           activation input comes from beyond the boundary and whose output
@@ -24,12 +24,12 @@ operator  Every contraction and every attention is its own operator whose
                         constants in design notes 6.6)
           summed over operators, minus P S once for inputs already resident.
           The fused bound also holds for these schedules, so the larger of
-          the two is reported.
+          the two is reported (only with the explicit experimental opt-in).
 
 Multi-level (Savage 1995): the boundary just outside level l sees all storage
 of levels <= l as fast memory. Multi-processor: a private level has P
 instances; per-core bounds are summed over cores. Capacities are upper
-estimates, so the bounds stay valid; omitted traffic only weakens them.
+estimates, so validity is conditional on them bounding the true capacity; omitted traffic only weakens them.
 """
 
 from __future__ import annotations
@@ -174,7 +174,7 @@ def attention_terms(a: AttentionOp, S: float, P: int) -> dict[str, float]:
 
 # --- fused pebble bound (design notes 6.12) ------------------------------------
 #
-# Valid for any level-A implementation: fusion, any summation order, softmax
+# Experimental candidate, not a validated theorem for every level-A implementation: fusion, any summation order, softmax
 # form, and recomputation. Segment argument (Hong-Kung / Smith): split the
 # schedule of one processor into segments of R I/O operations. The values a
 # segment can use from outside, D (red at its start or read in it), number at
@@ -239,6 +239,10 @@ def fused_contractions(graph: Graph) -> list[FusedContraction]:
         if "." not in g.name:
             continue  # lm_head
         layer, kind = g.name.split(".", 1)
+        # The experimental proof has not been extended to mixed final-layer
+        # row counts. Omit that layer entirely rather than overcount products.
+        if g.m != graph.batch * graph.new:
+            continue
         by.setdefault(kind, []).append((int(layer[1:]), g))
     qkv, o, gu, down = (by.get(k, []) for k in ("q_k_v", "o", "gate_up", "down"))
     if not (qkv and o and gu and down):
@@ -286,7 +290,7 @@ def fused_products_per_segment(cs: list[FusedContraction], X: float) -> float:
 
 
 def fused_pebble_elements(cs: list[FusedContraction], S: float, P: int = 1) -> float:
-    """Lower bound (elements moved, reads + writes) for any implementation with
+    """Experimental candidate (elements moved, reads + writes), pending proof, with
     S elements of fast memory per processor: max over R of R (N / F(S + R) - P)."""
     if not cs or math.isinf(S):
         return 0.0
@@ -337,12 +341,18 @@ class IOBound:
 
     def intensity(self, kind: str) -> dict[str, float]:
         """Arithmetic-intensity cap per boundary, FLOP per byte crossing it."""
-        return {lv.boundary.name: self.flops / lv.bytes(kind) for lv in self.levels}
+        return {lv.boundary.name: (self.flops / lv.bytes(kind) if lv.bytes(kind) else math.inf) for lv in self.levels}
 
     def to_dict(self) -> dict:
         g = self.graph
         out = {"phase": g.phase, "batch": g.batch, "new": g.new, "cached": g.cached,
-               "flops": self.flops, "peak_flops": self.peak_flops, "inputs": self.inputs}
+               "flops": self.flops, "peak_flops": self.peak_flops, "inputs": self.inputs,
+               "interpretation": "calibrated_resource_reference", "hardware_ceiling_certified": False,
+               "computation_scope": ("useful_product_graph" if any(
+                   op.shape.get("final_query_only") for op in g.ops) else "full_product_graph"),
+               "assumptions": ["Fixed explicit KV representation; rates/capacities are calibration assumptions.",
+                               "An operator lower bound is not an attainable schedule or an upper bound.",
+                               "Experimental fused proof is excluded unless explicitly requested."]}
         for kind in ("fused", "operator"):
             out[kind] = {
                 "time_s": self.time_s(kind),
@@ -357,12 +367,16 @@ class IOBound:
 
 
 def _level(graph: Graph, b: Boundary, gemms: list[GemmOp], attns: list[AttentionOp], other: float,
-           fused_cs: list[FusedContraction]) -> LevelBound:
+           fused_cs: list[FusedContraction], *, include_experimental_fused: bool = False,
+           evaluate_experimental: bool = True) -> LevelBound:
     P = b.processors
-    compulsory = max(0.0, graph.total_compulsory_bytes - P * b.fast_bytes)
+    # Initial residency can cover inputs, never newly required outputs.
+    output_bytes = sum(t.bytes for t in graph.outputs)
+    compulsory = max(output_bytes, graph.total_compulsory_bytes - P * b.fast_bytes)
     e = gemms[0].elem_bytes if gemms else 2
-    pebble = fused_pebble_elements(fused_cs, b.fast_bytes / e, P) * e
-    fused = max(compulsory, pebble)
+    pebble = fused_pebble_elements(fused_cs, b.fast_bytes / e, P) * e if evaluate_experimental else 0.0
+    applied_pebble = pebble if include_experimental_fused else 0.0
+    fused = max(compulsory, applied_pebble)
     groups: dict[str, dict] = {}
 
     def add(group: str, flops: float, terms: dict[str, float], e: int) -> None:
@@ -378,24 +392,28 @@ def _level(graph: Graph, b: Boundary, gemms: list[GemmOp], attns: list[Attention
         add("attention", a.flops, attention_terms(a, b.fast_bytes / a.elem_bytes, P), a.elem_bytes)
     total = sum(r["bytes"] for r in groups.values()) + other
     operator = max(fused, total - P * b.fast_bytes)
-    return LevelBound(b, fused, operator, groups, {"compulsory": compulsory, "pebble": pebble})
+    return LevelBound(b, fused, operator, groups, {"compulsory": compulsory, "pebble": applied_pebble,
+                  "experimental_pebble": pebble, "experimental_applied": include_experimental_fused})
 
 
-def traffic_at(graph: Graph, fast_bytes: float, processors: int = 1) -> tuple[float, float]:
+def traffic_at(graph: Graph, fast_bytes: float, processors: int = 1, *, include_experimental_fused: bool = False) -> tuple[float, float]:
     """(fused, operator) lower bounds on bytes crossing one boundary with
-    `fast_bytes` of fast memory per processor: Q_min(S) for any S, independent
+    `fast_bytes` of fast memory per processor: a lower bound on Q_min(S), independent
     of a device spec."""
     gemms, attns, other = operators(graph)
     b = Boundary("S", fast_bytes, processors, math.nan, False, {})
-    lv = _level(graph, b, gemms, attns, other, fused_contractions(graph))
+    lv = _level(graph, b, gemms, attns, other, fused_contractions(graph),
+                include_experimental_fused=include_experimental_fused,
+                evaluate_experimental=include_experimental_fused)
     return lv.fused_bytes, lv.operator_bytes
 
 
-def io_bound(graph: Graph, device: Device, engine: str = "gpu", dtype: str = "bf16") -> IOBound:
+def io_bound(graph: Graph, device: Device, engine: str = "gpu", dtype: str = "bf16", *, include_experimental_fused: bool = False) -> IOBound:
     peak = device.engine(engine).peak_flops(dtype)
     gemms, attns, other = operators(graph)
     fused_cs = fused_contractions(graph)
-    levels = tuple(_level(graph, b, gemms, attns, other, fused_cs) for b in boundaries(device, engine))
+    levels = tuple(_level(graph, b, gemms, attns, other, fused_cs, include_experimental_fused=include_experimental_fused)
+                   for b in boundaries(device, engine))
     inputs = {f"{engine}.compute.{dtype}": peak.describe()}
     for lv in levels:
         inputs |= lv.boundary.inputs

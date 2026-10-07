@@ -55,7 +55,8 @@
        "gpu_model": 0.015131478650441461
       }
      }
-    }
+    },
+    "interpretation": "ordered_ablation_marginal_effects"
    },
    {
     "phase": "decode",
@@ -111,7 +112,8 @@
        "gpu_model": 0.019765144803390908
       }
      }
-    }
+    },
+    "interpretation": "ordered_ablation_marginal_effects"
    },
    {
     "phase": "decode",
@@ -167,7 +169,8 @@
        "gpu_model": 0.034466133250684546
       }
      }
-    }
+    },
+    "interpretation": "ordered_ablation_marginal_effects"
    },
    {
     "phase": "decode",
@@ -223,7 +226,8 @@
        "gpu_model": 0.05390455233428353
       }
      }
-    }
+    },
+    "interpretation": "ordered_ablation_marginal_effects"
    }
   ],
   "prefill": [
@@ -271,7 +275,9 @@
        "chunks": 2
       }
      }
-    }
+    },
+    "interpretation": "ordered_ablation_marginal_effects",
+    "computation_scope": "full_product_graph"
    },
    {
     "phase": "prefill",
@@ -317,7 +323,9 @@
        "chunks": 2
       }
      }
-    }
+    },
+    "interpretation": "ordered_ablation_marginal_effects",
+    "computation_scope": "full_product_graph"
    },
    {
     "phase": "prefill",
@@ -363,7 +371,9 @@
        "chunks": 2
       }
      }
-    }
+    },
+    "interpretation": "ordered_ablation_marginal_effects",
+    "computation_scope": "full_product_graph"
    },
    {
     "phase": "prefill",
@@ -409,7 +419,9 @@
        "chunks": 2
       }
      }
-    }
+    },
+    "interpretation": "ordered_ablation_marginal_effects",
+    "computation_scope": "full_product_graph"
    },
    {
     "phase": "prefill",
@@ -455,7 +467,9 @@
        "chunks": 3
       }
      }
-    }
+    },
+    "interpretation": "ordered_ablation_marginal_effects",
+    "computation_scope": "full_product_graph"
    },
    {
     "phase": "prefill",
@@ -501,7 +515,9 @@
        "chunks": 9
       }
      }
-    }
+    },
+    "interpretation": "ordered_ablation_marginal_effects",
+    "computation_scope": "full_product_graph"
    },
    {
     "phase": "prefill",
@@ -547,7 +563,9 @@
        "chunks": 17
       }
      }
-    }
+    },
+    "interpretation": "ordered_ablation_marginal_effects",
+    "computation_scope": "full_product_graph"
    }
   ]
  },
@@ -557,8 +575,8 @@
    "phase": "prefill",
    "n": 16,
    "measured_s": 0.02180093599947862,
-   "phys_s": 0.011625461694255112,
-   "efficiency": 0.5332551636559615,
+   "phys_s": 0.011451890204479065,
+   "efficiency": 0.5252935105517004,
    "flash_attn": -1
   },
   {
@@ -566,8 +584,8 @@
    "phase": "prefill",
    "n": 64,
    "measured_s": 0.027705517519225346,
-   "phys_s": 0.015532530643478261,
-   "efficiency": 0.5606295075592782,
+   "phys_s": 0.015061312556521739,
+   "efficiency": 0.5436214120913074,
    "flash_attn": -1
   },
   {
@@ -575,8 +593,8 @@
    "phase": "prefill",
    "n": 512,
    "measured_s": 0.1864121191024559,
-   "phys_s": 0.13081690824347825,
-   "efficiency": 0.7017618214595727,
+   "phys_s": 0.1267399991652174,
+   "efficiency": 0.6798914135811015,
    "flash_attn": -1
   },
   {
@@ -584,8 +602,8 @@
    "phase": "prefill",
    "n": 1024,
    "measured_s": 0.39452533588846844,
-   "phys_s": 0.27788881029565216,
-   "efficiency": 0.7043623945464703,
+   "phys_s": 0.2691440283826087,
+   "efficiency": 0.6821970705037185,
    "flash_attn": -1
   },
   {
@@ -593,8 +611,8 @@
    "phase": "prefill",
    "n": 4096,
    "measured_s": 2.2552586884347523,
-   "phys_s": 1.5034507620173914,
-   "efficiency": 0.6666422657973892,
+   "phys_s": 1.454444080973913,
+   "efficiency": 0.6449123058177244,
    "flash_attn": -1
   },
   {
@@ -602,8 +620,8 @@
    "phase": "prefill",
    "n": 16384,
    "measured_s": 23.582312555695744,
-   "phys_s": 12.28793638733913,
-   "efficiency": 0.5210657927765983,
+   "phys_s": 11.867802187686957,
+   "efficiency": 0.5032501439228263,
    "flash_attn": -1
   },
   {
@@ -611,8 +629,8 @@
    "phase": "prefill",
    "n": 32768,
    "measured_s": 470.41803033294735,
-   "phys_s": 41.30748690253913,
-   "efficiency": 0.08781016933662804,
+   "phys_s": 39.869650427547825,
+   "efficiency": 0.08475366133251593,
    "flash_attn": -1
   },
   {
@@ -620,8 +638,8 @@
    "phase": "decode",
    "n": 512,
    "measured_s": 0.013999367032618988,
-   "phys_s": 0.012216210399221033,
-   "efficiency": 0.8726259102112873,
+   "phys_s": 0.012042638909444986,
+   "efficiency": 0.8602273860943312,
    "flash_attn": -1
   },
   {
@@ -629,8 +647,8 @@
    "phase": "decode",
    "n": 4096,
    "measured_s": 0.019565383186660134,
-   "phys_s": 0.016218564751703992,
-   "efficiency": 0.8289418406464927,
+   "phys_s": 0.016044993261927945,
+   "efficiency": 0.8200704841225689,
    "flash_attn": -1
   },
   {
@@ -638,11 +656,12 @@
    "phase": "decode",
    "n": 16384,
    "measured_s": 0.03499967117808928,
-   "phys_s": 0.02994092253164557,
-   "efficiency": 0.8554629664746501,
+   "phys_s": 0.029767351041869523,
+   "efficiency": 0.8505037344609303,
    "flash_attn": -1
   }
  ],
+ "interpretation": "historical_full_graph_ordered_ablation_marginal_effects",
  "sources": {
   "ablation": "2026-10-06T10:45:53",
   "baseline": "2026-10-06T10:03:16",

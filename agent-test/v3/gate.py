@@ -1,12 +1,15 @@
-"""Correctness gate for every v3 engine (PLAN.md section 7).
+"""Empirical numerical screening gate for every v3 engine (PLAN.md section 7).
 
 Runs agent-test/v2's unit tests, then for each engine teacher-forces the FP32
 model's own greedy continuation through the engine's real prefill/decode path
 and compares logits with the FP32 reference. Criteria are v2 check.py's,
 with E0 (mlx-lm) as the noise reference:
   median RMS, p99 max error, p99 top-2 margin error  <= 1.1x E0's
-  top-1 disagreements not significantly more frequent than E0's (sign test p >= 0.05)
+  top-1 disagreements not detected as significantly more frequent than E0's (sign test p >= 0.05)
   every top-1 disagreement within E0's p99 margin noise
+A non-significant difference test is not a noninferiority proof; this is an
+empirical acceptance rule on the sampled prompts only. FP32 is a numerical
+reference, not exact real arithmetic.
 Writes gate.json: per-engine pass/fail and E0's p99 margin noise (the near-tie
 threshold used later for generated-sequence divergences).
 """
@@ -48,7 +51,8 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--engines", nargs="+", default=adapters.ENGINES)
     a = ap.parse_args()
-    result = dict(unit_tests=None, engines={})
+    result = dict(unit_tests=None, engines={},
+                  interpretation="empirical_numerical_screen_not_quality_noninferiority")
     t = subprocess.run([sys.executable, "-m", "pytest", "-q", "test_engine.py"], cwd=adapters.V2,
                        capture_output=True, text=True)
     result["unit_tests"] = dict(returncode=t.returncode, tail=t.stdout[-600:])

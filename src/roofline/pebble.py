@@ -113,8 +113,11 @@ def attention_io_lower_bound(scores: float, head_dim: int, fast_elems: float) ->
 def attention_traffic(a: Attention, kv_read_bytes: float, on_chip_bytes: float) -> dict[str, float]:
     """Candidate lower bounds (bytes, all `a.count` layers) on attention
     operator traffic; the K/V cache read is compulsory on its own."""
-    io = attention_io_lower_bound(a.scores, a.head_dim, on_chip_bytes / a.elem_bytes)
-    return {"kv_read": kv_read_bytes, "pebble": max(0.0, io) * a.elem_bytes * a.count}
+    regular = a.count if a.final_scores is None else a.count - 1
+    io = max(0.0, attention_io_lower_bound(a.scores, a.head_dim, on_chip_bytes / a.elem_bytes)) * regular
+    if a.final_scores is not None:
+        io += max(0.0, attention_io_lower_bound(a.final_scores, a.head_dim, on_chip_bytes / a.elem_bytes))
+    return {"kv_read": kv_read_bytes, "pebble": io * a.elem_bytes}
 
 
 def operator_traffic(w: Workload, on_chip_bytes: float) -> dict:

@@ -31,8 +31,7 @@ def test_flops_match_workload(model, phase, batch, n):
     assert by["attention"] == w.flops["attention"]
     assert by["lm_head"] == w.flops["lm_head"]
     assert g.total_flops == w.total_flops
-    (attn,) = {op.shape["scores"] for op in g.ops if op.kind == "attention"}
-    assert attn == w.attention.scores
+    assert sum(op.shape["scores"] for op in g.ops if op.kind == "attention") == w.attention.total_scores
 
 
 @pytest.mark.parametrize("phase,batch,n", CASES)

@@ -1,37 +1,35 @@
 # roofline-inference
 
-Implementation-independent upper bounds on LLM inference performance, derived
-from a model spec and a device spec, plus the gap between today's engines and
-those bounds.
+Calibrated resource references for LLM inference, derived from a model and
+device spec, alongside engine measurements and conditional I/O bounds.
 
-Given the model architecture and calibrated hardware numbers, the project
-computes the best time any implementation could reach (decode per token,
-time to first token, a whole request), names the binding resource, and
-splits an engine's measured time into the pieces it loses. The end goal is a
-navigator for an agent that customizes an inference engine: where the gap
-is, and how much relaxing each constraint would gain.
+The time formula is a lower bound only when the hardware rates are genuine
+upper limits and the graph/storage assumptions hold. Our microbenchmark best
+values are calibrations, not certified ceilings; closeness to them does not
+prove that an implementation is optimal. The goal is to help an engine
+optimization agent form and test hypotheses.
 
-This is not a tool for placing existing kernels on a roofline plot.
-Measurements calibrate the device spec and decompose the engines' gap. The
-results report (Chinese) is [docs/report.md](docs/report.md); the full
-design and derivations are in [docs/design-notes.md](docs/design-notes.md).
+The revised Chinese report is [docs/report.md](docs/report.md); derivations
+and historical measurements are in [docs/design-notes.md](docs/design-notes.md).
 
 ## Results so far (Qwen3-0.6B BF16, MacBook Air M4, single stream)
 
-| | Bound | mlx-lm 0.32 | llama.cpp (Metal) |
-|---|---|---|---|
-| Decode, context 512 / 4k / 32k | 12.2 / 16.2 / 48.2 ms per token | 95 / 91 / 90% of bound | 87 / 83 / – % |
-| Time to first token, prompt 512 / 4k / 32k | 0.13 / 1.50 / 41.3 s | 67 / 78 / 74% | 70 / 67 / 9% |
+| Phase | Corrected calibrated reference (not measured latency) |
+|---|---|
+| Decode, context 512 / 4k / 32k | 12.0 / 16.0 / 48.0 ms per token |
+| TTFT, prompt 512 / 4k / 32k | 0.127 / 1.454 / 39.870 s |
 
-- Decode is bound by DRAM bandwidth (every token streams 1.19 GB of
-  weights); mlx-lm is close to the bound, so faster decode needs algorithmic
-  changes (quantization, speculative decoding), not better kernels.
-- Prefill is bound by compute; short prompts lose to small-GEMM efficiency
-  and per-chunk overheads, long prompts to attention.
-- The fanless machine throttles: the same 32k prefill takes 55.8 s cold and
-  70.7 s after ~40 minutes of load.
+Default prefill counts only useful final-layer rows; complete KV outputs are
+retained. DRAM traffic credits the modeled initial on-chip input capacity.
+Historical full-graph/cold values and hypothetical rate sensitivities are in
+[review_corrections.json](results/figures/review_corrections.json).
 
-Burst measurements; see [docs/report.md](docs/report.md) and design notes 6.9 for the decomposition and caveats.
+The v3 simple experiment observes TTFT ratios of 1.682 / 1.591 / 1.250 at
+16 / 64 / 256 tokens. Its 32k TTFT and decode results remain undecided.
+[Corrected analysis](agent-test/v3/results-simple/report-corrected.md) is
+explicitly post-collection and preserves the original registered analysis.
+Small-sample intervals, consecutive sessions and thermal effects limit inference.
+KV quality experiments have no measured compressed/sparse decode speed yet.
 
 ## Approach
 
@@ -40,25 +38,26 @@ Burst measurements; see [docs/report.md](docs/report.md) and design notes 6.9 fo
   bandwidth, memory hierarchy, kernel overheads). Every device value records
   its source (datasheet / estimate / measured) and confidence.
 - **Level-A bound:** any implementation that computes every product term of
-  the model's contractions at least once; summation order, fusion,
-  recomputation and the softmax formulation are free. Time is bounded by the
-  slowest resource:
+  the useful graph's contractions at least once (unused final rows are removed); summation order, fusion,
+  recomputation and the softmax formulation are free. With valid hardware ceilings,
+  resource necessities bound time; the current output is a calibrated reference:
 
   ```
-  T >= max( FLOPs / P_peak,  Q_b / B_b  for every memory boundary b,  exps / exp throughput )
+  T >= max( FLOPs / P_peak,  Q_b / B_b  for every memory boundary b )
   ```
 
 - **Traffic Q_b:** from an operator-level computation graph of the step.
   Compulsory traffic (inputs read once, outputs written once), red-blue
   pebble-game bounds per memory level and per core (Smith et al. 2019 for
-  GEMM, Saha & Ye 2024 for attention with explicit constants), and a
-  fusion- and recomputation-aware bound derived here (design notes 6.12).
-  Two variants are reported: fused (any implementation) and operator
+  GEMM, Saha & Ye 2024 for attention with explicit constants), and an
+  experimental fusion/recomputation candidate (design notes 6.12), excluded
+  from default bounds pending proof review.
+  Two variants are reported under explicit-KV storage assumptions: fused and operator
   boundary (every GEMM and attention its own operator).
 - **Per-plan cost and gap:** a calibrated cost model T_A(plan) (kernel
   fixed cost, streaming bandwidth, CPU encode, commit, sync, P(shape)) and a
-  telescoping ablation of mlx-lm that splits measured time into matmul,
-  attention, small kernels and engine overhead.
+  telescoping ablation of mlx-lm reporting ordered marginal effects of matmul,
+  attention, small kernels and engine overhead, not independent causal losses.
 - **Output:** JSON with the bound, the bottleneck, per-resource time and
   slack, and the provenance of every number used; figures in
   `results/figures/`.
@@ -102,7 +101,7 @@ pip install -r requirements.txt   # editable install with MLX, pytest, matplotli
 pytest
 ```
 
-Bounds (JSON: bound, bottleneck, per-resource time, slack, memory fit,
+References (JSON: interpretation, conditional bottleneck, resource time, slack, memory fit,
 provenance of every device number):
 
 ```bash
@@ -151,8 +150,8 @@ P = min(P_peak, I × B_peak)
 where `P_peak` is peak compute throughput (FLOP/s), `B_peak` is peak memory
 bandwidth (bytes/s), and `I` is arithmetic intensity (FLOPs/byte). Here `I`
 is not an input: it is derived from the computation graph and the
-fast-memory capacity, `I_max(S) = FLOPs / Q_min(S)`, with `Q_min` from the
-red-blue pebble game, and the bound is a max over several resources.
+fast-memory capacity, `I_cap(S) = FLOPs / Q_lower(S)`, where `Q_lower` is a
+lower bound from the red-blue pebble game, not an attained minimum, and the bound is a max over several resources.
 
 - Williams, Waterman, Patterson. *Roofline: An Insightful Visual Performance
   Model for Multicore Architectures.* CACM, 2009.

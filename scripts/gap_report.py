@@ -32,8 +32,8 @@ from roofline.workload import decode, prefill  # noqa: E402
 SURFACE, INK, INK2, MUTED, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#8a8984", "#e6e5e0"
 BOUND = "#c9c8c2"
 PIECE_COLOR = {"gemv": "#2a78d6", "gemm": "#2a78d6", "attention": "#eb6834", "small": "#1baf7a", "engine": "#eda100"}
-PIECE_LABEL = {"gemv": "matmul (GEMV / GEMM)", "gemm": "matmul (GEMV / GEMM)", "attention": "attention",
-               "small": "small kernels", "engine": "engine (sync, Python, loop)"}
+PIECE_LABEL = {"gemv": "matmul", "gemm": "matmul", "attention": "attention",
+               "small": "small kernels", "engine": "engine"}
 
 
 def newest(pattern: str) -> str | None:
@@ -118,13 +118,13 @@ def main() -> None:
 
     fig, (a1, a2) = plt.subplots(2, 1, figsize=(11, 7.2), facecolor=SURFACE,
                                  gridspec_kw={"height_ratios": [len(dec), len(pre)]})
-    bars(a1, dec, [f"decode ctx {short(g['ctx'])}" for g in dec], "mlx-lm decode: share of measured time per token")
-    bars(a2, pre, [f"prefill L {short(g['L'])}" for g in pre], "mlx-lm prefill: share of measured time to first token")
-    handles = [matplotlib.patches.Patch(color=BOUND, label="physical bound")]
-    handles += [matplotlib.patches.Patch(color=PIECE_COLOR[k], label=f"loss: {PIECE_LABEL[k]}")
+    bars(a1, dec, [f"decode ctx {short(g['ctx'])}" for g in dec], "mlx-lm decode: normalized reference + positive marginal residuals")
+    bars(a2, pre, [f"prefill L {short(g['L'])}" for g in pre], "mlx-lm prefill: normalized reference + positive marginal residuals")
+    handles = [matplotlib.patches.Patch(color=BOUND, label="calibrated reference")]
+    handles += [matplotlib.patches.Patch(color=PIECE_COLOR[k], label=f"{PIECE_LABEL[k]} residual")
                 for k in ("gemv", "attention", "small", "engine")]
     fig.legend(handles=handles, loc="lower center", ncol=5, fontsize=8.5, frameon=False, labelcolor=INK2)
-    fig.suptitle("Where mlx-lm's time goes vs the level-A bound (Qwen3-0.6B BF16, MacBook Air M4)",
+    fig.suptitle("Historical full-graph ablations vs calibration (ordered effects; not causal shares)",
                  color=INK, fontsize=12, x=0.01, ha="left")
     fig.tight_layout(rect=(0, 0.05, 1, 1))
     out = Path("results/figures")
@@ -132,6 +132,7 @@ def main() -> None:
 
     llama = llama_rows(model, device)
     (out / "gap.json").write_text(json.dumps({"mlx_lm": {"decode": dec, "prefill": pre}, "llama_cpp": llama,
+                                              "interpretation": "historical_full_graph_ordered_ablation_marginal_effects",
                                               "sources": {"ablation": abl["timestamp"], "baseline": base["timestamp"],
                                                           "calibration": cal.data["sources"]}}, indent=1))
 

@@ -49,7 +49,7 @@ def test_operators_cover_graph_flops(model):
     g = prefill_graph(model, 1, 256)
     gemms, attns, other = operators(g)
     assert sum(x.flops for x in gemms) + sum(a.flops for a in attns) == g.total_flops
-    assert len(gemms) == 4 * model.num_layers + 1  # qkv, o, gate_up, down per layer + lm_head
+    assert len(gemms) == 4 * model.num_layers + 2  # qkv, o, gate_up, down per layer + lm_head
     qkv = gemms[0]
     assert (qkv.n, qkv.persist) == (model.q_dim + 2 * model.kv_dim, 256 * 2 * model.kv_dim)
     # Norm weights and token ids in, sampled token out.
@@ -61,7 +61,7 @@ def test_fused_with_tiny_fast_memory(model, device):
     for w, g in ((decode(model, 1, 4096), decode_graph(model, 1, 4096)),
                  (prefill(model, 1, 512), prefill_graph(model, 1, 512))):
         tiny = replace(device, hierarchy=tuple(replace(l, capacity=q(1.0)) for l in device.hierarchy))
-        b = io_bound(g, tiny)
+        b = io_bound(g, tiny, include_experimental_fused=True)
         for lv in b.levels:
             S = lv.boundary.processors * lv.boundary.fast_bytes
             assert lv.fused_terms["compulsory"] == pytest.approx(w.total_bytes - S)
@@ -185,10 +185,10 @@ def test_traffic_at_matches_device_boundary(model, device):
     chip = io_bound(g, device).levels[-1]
     fused, operator = traffic_at(g, chip.boundary.fast_bytes)
     assert (fused, operator) == pytest.approx((chip.fused_bytes, chip.operator_bytes))
-    # Q_min(S) never grows with S; the fused bound reaches 0 once S holds everything.
+    # Q_min(S) never grows with S; the fused bound retains compulsory output writes even when inputs fit.
     qs = [traffic_at(g, s)[1] for s in (2**12, 2**16, 2**20, 2**24)]
     assert all(a >= b for a, b in zip(qs, qs[1:]))
-    assert traffic_at(g, 1e12)[0] == 0
+    assert traffic_at(g, 1e12)[0] == sum(t.bytes for t in g.outputs)
 
 
 # --- fused pebble bound (design notes 6.12) ------------------------------------
@@ -212,7 +212,7 @@ def test_recompute_capacity_is_the_exact_maximum(Y):
 
 def test_fused_contractions_of_qwen3(model):
     cs = {c.name: c for c in fused_contractions(prefill_graph(model, 1, 1024))}
-    assert cs["qkv"].count == model.num_layers - 1  # layer 0 reads the embedding table directly
+    assert cs["qkv"].count == model.num_layers - 2  # layer 0 reads the embedding table directly
     assert cs["qkv"].omega == model.intermediate_size + model.q_dim
     assert cs["down"].K == model.intermediate_size and cs["gate_up"].n == 2 * model.intermediate_size
 
@@ -238,6 +238,6 @@ def test_fused_bound_shrinks_with_capacity_negligible_for_decode(model):
 
 def test_fused_bound_beats_compulsory_only_for_long_prompts_at_core_level(model, device):
     for L, expect in ((4096, False), (32768, True)):
-        core = io_bound(prefill_graph(model, 1, L), device).levels[0]
+        core = io_bound(prefill_graph(model, 1, L), device, include_experimental_fused=True).levels[0]
         assert bool(core.fused_terms["pebble"] > core.fused_terms["compulsory"]) is expect
         assert core.operator_bytes >= core.fused_bytes

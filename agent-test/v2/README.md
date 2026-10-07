@@ -1,5 +1,8 @@
 # v2：Qwen3-0.6B BF16 单流引擎与 mlx-lm 的受控对照
 
+> **2026-10-07 修订：以下表格是 v2 历史完整图／校准速率口径，不代表已证硬件极限。** v2 删除最终层无用计算；默认 estimator 已改为有用图，旧 prefill 效率不直接沿用。当前结论见 [主报告](../../docs/report.md) 和 [v3 采集后修订分析](../v3/results-simple/report-corrected.md)。32k 收益未定；短 prompt 的观察收益存在，但本轮未独立归因。数值门槛是经验筛查，不是质量非劣证明。
+
+
 2026-10-06 · MacBook Air M4 24 GB · MLX 0.32.3 / mlx-lm 0.32.0 · A 级（BF16 权重与 KV 不变，只改实现）
 
 ## 结论
@@ -82,9 +85,9 @@
 
 *上界 = 投影 FLOPs 与 causal attention FLOPs 之和 ÷ 3.68 TFLOP/s，未计 lm_head 与逐元素操作，属粗略估计。*
 
-- **短 prompt：原报告的诊断得到支持。** 原报告把损失归因于"小矩阵乘效率低 + 每块固定开销"。针对这两点修改后（整段前向、skinny GEMM），TTFT 快了 1.56–1.72 倍。
+- **短 prompt：观察结果与原诊断相容。** 原报告把损失归因于"小矩阵乘效率低 + 每块固定开销"。针对这两点修改后（整段前向、skinny GEMM），TTFT 快了 1.56–1.72 倍。
 - **长 prompt：差距仍有约 20–30%，本轮只缩小了几个百分点。** 实测纯寄存器 simdgroup MMA 峰值约 3.6 TFLOP/s；MLX GEMM 在 M ≥ 128 时达到其 87–88%，MLX attention 约 77%，v2 的 attention kernel 约 82%。
-- **"softmax 运算未计入上界"的假设被否定**（[softmax_cost.py](softmax_cost.py)，[softmax_cost.json](softmax_cost.json)）。在同一个 attention kernel 上做三个变体，只改 softmax，加载、MMA、控制流和启动几何不变；2048 个 query、2k/8k/32k 个 key，5 轮交错：
+- **删除 softmax/exp 的所测试变体没有收益（不足以排除其成本）**（[softmax_cost.py](softmax_cost.py)，[softmax_cost.json](softmax_cost.json)）。在同一个 attention kernel 上做三个变体，只改 softmax，加载、MMA、控制流和启动几何不变；2048 个 query、2k/8k/32k 个 key，5 轮交错：
 
   | 变体 | 2k | 8k | 32k (TFLOP/s) |
   |---|---|---|---|
@@ -93,12 +96,12 @@
   | 去掉整个 softmax | 2.38 | 2.58 | 2.47 |
   | MLX SDPA | 2.44 | 2.55 | 2.52 |
 
-  去掉 softmax 反而更慢（编译器对寄存器与指令调度的安排变了），去掉 exp 也没有变化。所以 attention 离 MMA 峰值（同轮实测 3.44–3.53）的约 20% 差距，在 MMA 与数据搬运路径本身（threadgroup 加载、V 的类型转换、barrier），而不在 softmax。上界的计算资源项不需要因此修改；这部分差距原则上可以由更好的 kernel 收回，本轮没有做到。
+  去掉 softmax 反而更慢（编译器对寄存器与指令调度的安排变了），去掉 exp 也没有变化。这些结果与数据搬运或调度限制相容，但删除操作同时改变寄存器和指令安排，不能唯一归因，也不能证明全部差距可以由更好的 kernel 收回。
   *注：该实验第一版的"去掉 softmax"变体因脚本切割位置错误、删掉了写输出的代码，测得 581 TFLOP/s，已作废；修正后先校验该变体确实计算 S·V（相对误差 0.23%）再计时。*
 - **热降频是长 prompt 的第二个来源。** 持续 60 s：纯 MMA kernel 全程 3.53–3.56 TFLOP/s，不降速；attention kernel 从 2.65 降到 2.33（−12%，热状态升到 1）。attention 比纯 MMA 多了大量片上数据搬运，功耗更高。32k 请求正好持续约 60 s。
 - 粗略拆解 32k（上界 41.3 s）：attention 按 burst 效率约 45 s，计入 60 s 内平均约 7% 的降频约 48 s，投影 GEMM 约 9 s，合计约 57 s，与实测 59.8 s 接近。这只是量级核对，不是严格分解。
 
-因此，"prefill 还有 20–70% 空间"：短 prompt 被证实并已大部分收回；长 prompt 的空间确实存在，位置在 attention kernel 的数据路径与持续负载下的降频。
+因此，"prefill 还有 20–70% 空间"：短 prompt 被证实并已大部分收回；长 prompt 的优化收益仍未确定；数据路径和持续负载热状态是待检验的解释。
 
 ## 4. 改动内容
 
@@ -142,10 +145,10 @@
 
 ## 8. 下一步
 
-1. **长 prompt：** softmax 假设已否定（第 3 节）。下一步是改 attention 的数据路径（例如 Q/K/V 片段直接从 device 读入寄存器、双缓冲 K/V），并把持续负载下的算力作为上界的第二个校准点。
+1. **长 prompt：** 删除 softmax 的试验不足以唯一定位损失（第 3 节）。下一步是改 attention 的数据路径（例如 Q/K/V 片段直接从 device 读入寄存器、双缓冲 K/V），并把持续负载下的算力作为上界的第二个校准点。
 2. **在正式基准中做逐项消融**（整段 prefill、skinny GEMM、融合 GEMV、attention kernel、预分配 KV），并把 mlx-lm 的 `clear_cache` 和分块大小作为对照变量。
 3. **检验导航价值：** 按 [对照实验设计](../../docs/navigation-experiment.md) 执行。
-4. **放宽到 B/C 级**（量化、投机解码）：decode 在 A 级已接近上界，要再快成倍，只能改变计算本身。需要先定质量预算，基线也要换成同配置的量化版本。
+4. **放宽到 B/C 级**（量化、投机解码）：decode 在 A 级已接近上界，成倍加速的候选包括改变计算本身，但当前校准线不能排除其他实现空间。需要先定质量预算，基线也要换成同配置的量化版本。
 
 ## 复现
 

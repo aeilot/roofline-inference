@@ -1,5 +1,10 @@
 # 项目思路与设计笔记
 
+> **2026-10-07 科学性审查修订：** 本文件含历史推导与测量口径；当前结论以 [report.md](report.md) 为准。硬件最快观察值只用于校准，不是已证明的绝对上限；默认 prefill 已删除最终层无用 Q/attention/O/MLP 行，并保留全部 KV 输出，`prune_final=False` 可复现旧计数。默认 DRAM 参考线抵扣可能初始驻留的输入。本文旧时间与百分比不能直接用作新口径效率。
+>
+> 6.12 是实验性候选推导，默认不应用；6.14 的时间是模型参考值，没有低位宽/稀疏 decode 实测。统计修订为采集后分析，原方案和原报告保留；见 [v3 修订报告](../agent-test/v3/results-simple/report-corrected.md)。
+
+
 本文记录项目的目标、范围、建模方法和待办。
 2026-10-05 从头重新确定了范围(第 1、2 节),同日把 prefill 加入范围,其余各节随之调整。2026-10-06 加入计算图 + pebble game → roofline 的方法(6.7),并补出 attention I/O 下界的常数(6.6)。最后与代码和实测同步:2026-10-06。
 
@@ -75,7 +80,7 @@ B、C 下不加质量约束时上界没有意义(权重压到 1 bit 就可以任
 
 ## 5. 上界与方案代价模型
 
-### 5.1 A 级上界 = 物理上界
+### 5.1 条件资源界与校准参考线（下表为历史完整图／冷启动口径）
 
 只算任何实现都绕不开的量(第 6.1 节):
 
@@ -83,10 +88,10 @@ B、C 下不加质量约束时上界没有意义(权重压到 1 bit 就可以任
 T >= max( FLOPs / P_peak, Bytes_dram / B_dram, ... )
 ```
 
-其中 `Bytes_dram` 取**最优融合下的最小数据移动**:权重必读一次、KV 必读一次、新 K/V 必写一次、中间激活留在片上。
+其中 `Bytes_dram` 是指定显式 KV 表示下的**必读必写下界**，没有证明可达:权重必读一次、KV 必读一次、新 K/V 必写一次、中间激活留在片上。
 
 理由:理论上整个模型可以做成一个常驻 GPU 的 kernel,采样也在 GPU 上完成,token 异步交给 CPU。
-这样 dispatch、commit、同步都可以被摊薄到接近 0,所以它们不进上界,而是作为方案代价(5.3)。
+这是假设性可行方向，尚未构造达到资源 max 的实现。未证明不可避免的 dispatch、commit、同步成本不进入资源界，而作为方案代价(5.3)。
 
 Qwen3-0.6B BF16 单流 decode(带宽 102.7 GB/s):
 
@@ -103,7 +108,7 @@ T_phys(ctx) = 11.6 ms + ctx × 1.12 µs
 权重每 token 读 1.19 GB(含 tied 的 lm_head);KV 每个上下文 token 114,688 B(28 层 × K/V × 8 头 × 128 × 2 B)。
 上下文越长,瓶颈越从读权重转向读 KV。
 
-### 5.2 prefill 上界
+### 5.2 prefill 校准参考（下表为历史完整图口径）
 
 Qwen3-0.6B BF16 单流 prefill(算力 3.68 TFLOP/s,带宽 102.7 GB/s),attention FLOPs 已按 causal 减半:
 
@@ -608,19 +613,19 @@ Smith 的模型不允许重算,论文论证这不失一般性。attention 项对
 计算 / 通信权衡是什么"。所以 AI 不再是自变量,而是由计算图与快存储容量 S 推出的派生量:
 
 ```
-AI_max(S) = FLOPs / Q_min(S)
-perf(S)  ≤ FLOPs / max(FLOPs / P_peak, Q_min(S) / B)
+AI_cap(S) = FLOPs / Q_lower(S)
+perf(S)  ≤ FLOPs / max(FLOPs / P_peak, Q_lower(S) / B)
 ```
 
-`iobound.traffic_at(graph, S, P)` 对任意 S 给出 Q_min(S)(整图界与算子边界界);图由 `scripts/plot_vs_capacity.py` 生成
+`iobound.traffic_at(graph, S, P)` 对任意 S 给出 Q_min(S) 的下界（不是最优流量本身）(整图界与算子边界界);图由 `scripts/plot_vs_capacity.py` 生成
 (`results/figures/perf_vs_capacity.png`):两层模型,一个处理器,S 从 1 KiB 到 4 GiB,DRAM 102.7 GB/s,
 竖线标出 M4 各级片上存储(threadgroup 32 KiB、每核 SRAM 估计 512 KiB、GPU L2 约 3 MiB、L2 + SLC 12 MiB)。
 
 - **decode(ctx 4k):** AI ≈ 1.3,从 1 KiB 到约 256 MiB 几乎不变;直到 S 能放下大部分权重与 KV(约 1 GiB 以上)才上升,
-  S ≥ 权重 + KV 时稳态不再有 DRAM 流量。任何片上存储大小都不能让单流 decode 变成算力瓶颈。
+  S 足够大时该流量下界可能退化；仍有新 KV/token 输出，不能断言流量归零。足够容量的理想驻留可能改变 decode 的限制资源。
 - **prefill,算子边界界:** AI 随 S 约按 √S 增长(GEMM 的 pebble 项),在 S ≈ 5~10 KiB 处越过机器平衡点 36;
-  M4 的 threadgroup memory(32 KiB)已经在这之上,所以 prefill 在任何一级都是算力瓶颈。
-- **prefill,整图界:** 加入 6.12 的融合 pebble 界后,小 S 时也约按 √S 上升,在必读必写占上风处变平
+  M4 的 threadgroup memory(32 KiB)已经在这之上,因此此 I/O 下界没有进一步抬高计算参考时间；这不能证明实际实现为算力瓶颈。
+- **prefill,整图界（历史实验性曲线，已从默认结果移出）:** 加入 6.12 的候选融合 pebble 界后,小 S 时也约按 √S 上升,在必读必写占上风处变平
   (L 512 约 16 KiB,4k 约 300 KiB,32k 约 1 MiB);在所有 S 下都高于机器平衡点。
 
 下一步:第二个维度用可用并行度 / 在途访存请求数(带宽随并发而变),需要在 Q_min(S) 之外加一个并发约束。
@@ -632,7 +637,7 @@ perf(S)  ≤ FLOPs / max(FLOPs / P_peak, Q_min(S) / B)
 于是上界变成两个变量的函数:
 
 ```
-perf(S, T) ≤ FLOPs / max( FLOPs / P(T),  Q_min(S) / B(T) )
+perf(S, T) ≤ FLOPs / max( FLOPs / P(T),  Q_lower(S) / B(T) )
 ```
 
 T 为并发线程数。B(T)、P(T) 由 `benchmarks/concurrency.py` 实测(每线程 1 个或 4 个 16 B 读在途;每线程 64 条 FMA 链)。
@@ -653,14 +658,16 @@ T 为并发线程数。B(T)、P(T) 由 `benchmarks/concurrency.py` 实测(每线
 - **prefill(L 4k):** S 只在约 4 KiB 以下起作用(算子边界下的 GEMM pebble 项);
   到 90% 需要 T ≥ 约 16k~32k 个并发线程,比带宽多一个数量级。
 - **算力比带宽难喂。** 跑满带宽要约 1k 线程,跑满算力要约 32k 线程。
-  所以小 GEMM(prefill 短 prompt,M = 16~64)效率低,并不是带宽问题,而是给不出足够的并行线程(6.9 的 P(shape))。
+  所测 FMA/读取 kernel 的并发曲线与小 GEMM 并行不足的解释一致；线程阈值依赖 kernel 的 ILP、寄存器与调度，不能直接认定为所有 GEMM 的唯一原因。
 - **局限:** 并行度目前是机器侧的量(实现保持了多少并发)。计算图本身对可用并行度的限制
   (例如 decode 的依赖链、GEMV 的输出维度)还没有接入 Q_min(S) 的推导。
 
 ### 6.12 整图界超出必读必写的部分:融合 + 重算下的 pebble 界(2026-10-06,计划 10a)
 
 实现:`iobound.fused_contractions`、`recompute_capacity`、`fused_pebble_elements`;整图界现在取 max(必读必写, 本节的界)。
-**以下是本项目自己的推导,未经同行评审。**
+**以下是本项目的实验性候选推导，尚未建立覆盖所有允许执行的证明。默认 `io_bound` / `traffic_at` 不应用它，单独报告候选数值。**
+
+待证明：任意求和树/split-K 下有用乘积与跨段部分和的映射；进入/离开段预算及其合成常数；私有链或从头重算的二分是否穷尽；多核部分和的迁移与合并。下面的算式描述候选论证，测试只作一致性检查。
 
 **设定。** 选择 ③ 下的任意实现:融合、求和顺序、softmax 写法、重算都自由。
 把一个处理器的执行按 I/O 次数切成段,每段 R 次 I/O。一段能用的"外来值"集合 D(段开始时在快存储里的,加上段内读进来的)至多
@@ -714,10 +721,10 @@ N 为计入乘积总数,P 个处理器各自分段再求和,则对任意 R,流�
 | 16k | 3.07 GB | **4.87 GB** | 0.07 GB | 60.8 GB |
 | 32k | 4.95 GB | **9.74 GB** | 0.09 GB | 135 GB |
 
-- **整图界第一次超过了必读必写**:在 core 边界、prompt 约 8k 以上,32k 时约为 2 倍
+- **候选值超过了必读必写（尚非已证整图界）**:在 core 边界、prompt 约 8k 以上,32k 时约为 2 倍
   (core 边界的整图 AI 上限从 30740 降到 15612 FLOP/byte)。
 - **DRAM 边界不起作用。** 17 MiB 的快存储足以放下一整块重算所需的权重(r* 达到 m·K),界退化到接近 0。
-- **与算子边界界仍差约 14 倍。** 真实的最小流量在两者之间;差距来自本节较松的地方:
+- **与算子边界界仍差约 14 倍。** 两者都是下界，不能夹逼真实最小流量。135 GB 不是可行调度的流量上界；需要另构造完整调度。候选推导较松的地方包括:
   完成的输出不必写回、所有收缩共用一个预算、α 允许把 D 全部算作私有 A 值。
 - **性能 vs S 图(6.10)随之改变:** 整图界在小 S 时也按约 √S 上升。例如 prefill 4k:
   S = 1 KiB 时 AI 上限 109(算子边界 17),32 KiB 时 723(95),512 KiB 时 3330(354)。
@@ -739,7 +746,7 @@ N 为计入乘积总数,P 个处理器各自分段再求和,则对任意 R,流�
 
 | 论文 | 结论 | 用处 |
 |---|---|---|
-| Haris & Onak 2025(arXiv 2502.15955) | d = Ω(log n) 时,对每步注意力输出做 (1±η) 近似也要 Ω(nd) bits;99% 的 score 近 0 但位置未知时仍然成立;固定滑窗 W 为 Θ(dW);访问模式预先固定的算法每步要 Ω(nd) 时间,自适应的(检索)可做到 O(d√n) | 主要依据。Qwen3 的 head_dim 128 ≫ ln(32k) ≈ 10.4,处在 Θ(nd) 区间,低维的 e^d 界不相关 |
+| Haris & Onak 2025(arXiv 2502.15955) | d = Ω(log n) 时,对每步注意力输出做 (1±η) 近似也要 Ω(nd) bits;99% 的 score 近 0 但位置未知时仍然成立;固定滑窗 W 为 Θ(dW);访问模式预先固定的算法每步要 Ω(nd) 时间,自适应的(检索)可做到 O(d√n) | 主要依据。Qwen3 的 head_dim 128 ≫ ln(32k) ≈ 10.4,在该渐近维度条件的量级上；隐藏常数和最坏情况量词不能直接给出本模型的数值下限 |
 | SubGen(Zandieh et al. 2024,arXiv 2402.06082) | keys (m, δ) 可聚类且 ‖q‖ ≤ r 时,内存与每步时间 O(d(mt + s)),t = ε⁻² e^{2δr} log n,s = ε⁻² d log n | 可聚类这一档的形状;需要实测 m 与 δr |
 | Chen et al. 2025(arXiv 2503.11108) | 空间界推广到 tensor attention;存预计算量与现算之间的时间—内存取舍 | 引出下面的"KV 存储方案"检查 |
 | van den Brand et al. 2023(arXiv 2304.02207) | 动态维护注意力(逐元素更新)的摊还更新 / 查询时间,条件最优 | 只有 ω 指数、无常数;对当前 estimator 基本不用,prefix 编辑 / KV 复用时再看 |
@@ -772,7 +779,7 @@ M4 + Qwen3-0.6B,context 32k 的 decode 物理上界(`python -m roofline ... deco
 **SubGen 的常数在 32k 以内无效。** ε = 0.1 时 s = 100 · 128 · ln n > n(n ≤ 32k),可证版本保留全部 value,
 不比精确注意力便宜;取 m = 64、δr = 0.5,ε = 0.3 时要 n ≈ 10⁶ 才把 KV 降到 3%,ε = 0.5 时 32k 降到 27%。
 
-**实测:Qwen3-0.6B 的 key 不可聚类(在 softmax 有意义的尺度上)。** `benchmarks/key_clusters.py`:
+**实测:当前 Qwen3-0.6B 样本未显示所检查的 SubGen 小半径条件。** `benchmarks/key_clusters.py`:
 prefill 后取每层每个 KV head 的 key(k-norm 与 RoPE 之后),greedy farthest-first(Gonzalez,半径在最优的 2 倍内)求覆盖半径;
 r = 该 KV head 下两个 query head 在所有位置上的 max ‖q‖ · head_dim^-½(缩放并入 r)。
 仓库语料(text)与随机 token(random),n = 1k ~ 8k,centers 最多 n/2:
@@ -784,15 +791,15 @@ r = 该 KV head 下两个 query head 在所有位置上的 max ‖q‖ · head_d
 
 - SubGen 需要 δr = o(log n),实用上 δr ≲ 2(e^{2δr} 进 t);实测即使一半 token 当中心,最好的 head 也是 δr ≈ 17(e^{34}),
   且不是少数离群点造成的:覆盖 50% / 90% key 的半径与最大半径同量级。
-- 覆盖 90% 的半径随 n 增大(k 固定为 64 时 51 → 60),没有饱和;text 与 random 几乎一样,说明 key 的分布主要由 RoPE 与 k-norm 决定,不是由内容聚类。
+- 覆盖 90% 的半径随 n 增大(k 固定为 64 时 51 → 60),没有饱和;text 与 random 几乎一样,与 RoPE/k-norm 主导的解释相容，但没有因果消融，不能确定其来源或排除内容结构。
   (SubGen 在 Llama-2 上用 t-SNE 看到的"可聚类"是 2 维投影的直观印象,不等于定理要求的尺度。)
-- 结论:对本模型,**可证的**亚线性 KV 只剩固定访问模式(窗口)与降位数两条;`budget` / `retrieval` 只能作为带质量代价的 C 级 knob。
+- 结论:当前样本和参数下没有得到实用的 SubGen 保证；最坏情况下界不能排除本模型的其他结构性算法，降位数也不改变随 n 线性增长的阶;`budget` / `retrieval` 只能作为带质量代价的 C 级 knob。
 
 **A 级的补充检查:KV 存储方案。** "缓存 KV"只是一个实现选择。缓存每层的输入 hidden state、每步重算 K/V,与原模型数学等价
-(每个乘积项至少算一次,9 节的 A 级定义允许重算),所以与实现无关的上界应当对存储方案取最小。
+(每个乘积项至少算一次,9 节的 A 级定义允许重算),所以资源模型应检查其他数学等价存储方案；有限候选的最小值不是对所有存储方案的排除证明。
 Qwen3-0.6B 每层每 token:K+V 2048 个元素,hidden 1024 个,存 hidden 让 KV 流量减半;代价是重算 K/V 投影,每省 1 字节多 2048 FLOP,
 而 M4 的机器平衡点约 4.0e12 / 120e9 ≈ 33 FLOP/B,差约 60 倍。32k 时省约 15.7 ms 的读取,多约 0.96 s 的计算。
-只缓存 token id、整段重算更差。`kvpolicy.best_storage_plan` 在 512 / 4k / 32k 上都选 `kv`,所以**上界数值不变**,但这一排除现在有代码和测试。
+只缓存 token id、整段重算更差。`kvpolicy.best_storage_plan` 在 512 / 4k / 32k 上都选 `kv`,所以**上界数值不变**,但这只检查了 kv / hidden / token 三个候选，尚未穷尽混合或其他状态表示。
 省下的字节与多出的 FLOPs 都与 batch × context 成正比,比值 2·hidden·2·kv_dim / ((2·kv_dim − hidden)·字节数) 与 batch 无关;只有机器平衡点接近这个比值的设备(或 hidden ≪ 2·kv_dim 的模型)才需要重新看。
 
 ### 6.14 KV knob 的质量表(2026-10-07,计划 18b)
@@ -812,7 +819,7 @@ Qwen3-0.6B 每层每 token:K+V 2048 个元素,hidden 1024 个,存 hidden 让 KV 
 `quest:k` → `retrieval(k, page=16)`(每个 query head、每个 query 按页 min/max 的分数上界取 top k/16 页)。
 `kivi` 与 `bits` 的区别只在 key:按通道、沿 64 个 token 分组量化(KIVI),value 仍按 token。
 
-**结果(32k;bound 为 M4 上的 decode 物理上界,A 级 48.2 ms):**
+**历史质量结果(32k;bound 列为旧校准模型参考值，不是实测 decode 时间；A 级旧值 48.2 ms):**
 
 | 策略 | bound | p50 KL | p99 KL | top-1 | ΔNLL |
 |---|---|---|---|---|---|
@@ -831,17 +838,13 @@ Qwen3-0.6B 每层每 token:K+V 2048 个元素,hidden 1024 个,存 hidden 让 KV 
 
 4k 与 16k 的规律相同(完整表见 json)。ΔNLL 的分辨率约 ±0.02(同一格子里出现过 −0.017)。
 
-**结论:**
+**修订解读（替代原性能与“免费”结论）:**
 
-- **免费的只有 8 bit。** `bits:8` 的 p99 KL 约为噪声底线的 2 倍,top-1 与底线相同;32k 时 48.2 → 31.0 ms。
-- **小代价档:KIVI 4/3 bit 与 Quest 4096。** 同样 4 bit,key 按通道量化把 p99 KL 降低 5~14 倍(Qwen3 的 key 有离群通道);
-  32k 时 `kivi:4` 21.9 ms、`kivi:3` 19.6 ms、`quest:4096` 18.5 ms,ΔNLL 都在 0.01~0.02。2 bit 在所有长度上都不可用。
-- **prefill 后固定选择的 budget 有重尾。** `window` / `snapkv` / `kcenter` 即使保留 4096 个 token,中位 KL 很小,但 p99 KL 有 3~5 nats:
-  个别位置需要的 token 恰好被丢掉。与 6.13 的理论一致:稀疏位置事先未知时,非自适应的选择逃不过 Ω(nd);
-  自适应(按 query 选)的 Quest 在相同时间下明显更好。
-- **k-center(SubGen 的经验做法)是 budget 里最差的**,与 6.13 测得 key 不可聚类一致。
-- **导航含义:** 32k decode 从 48.2 ms 出发,质量几乎不变能到 31 ms(8 bit);接受 ΔNLL ≈ 0.015 能到 18.5~22 ms(Quest 4096 或 KIVI 3/4 bit);
-  再往下(≈ 12~16 ms 的 budget 类)质量代价跳到 ΔNLL 0.1~0.4。两条小代价路线作用在不同维度上(位数 vs 读哪些 token),可以叠加,尚未测。
+- 8 bit 在这份语料上的观察变化较小，但没有质量容忍阈值、非劣区间或任务测量，不能称为免费或唯一无损方案。
+- KIVI 风格 3/4 bit 与 Quest 风格 4096 的点估计值得后续验证；没有置信区间，不按 ΔNLL 0.013 与 0.016 排序，不断言 2 bit 普遍不可用。
+- 固定预算策略在若干位置出现较大 KL，与未知相关位置的困难相容；最坏情况定理不能直接证明该语料的误差机制。
+- 时间列仅是理想模型参考，不能说 8 bit 实际可到 31 ms，或 Quest 在相同实测时间下更好。质量脚本仍做全前缀分数与反量化，不是稀疏／低位宽 decode 引擎。
+- 32k 四个 prompt 约 89% 重叠，1024 个位置不是独立样本。需要互不重叠文档、按独立文档的区间、自由生成与预定义任务预算；尚不建立质量—速度 Pareto 前沿。
 
 **局限:** 一个 0.6B 模型、一份仓库语料(中英文文档与 Python 代码,文件间有重复内容,对需要精确回看前文的位置不利于 budget 类方法);
 质量只用 KL / NLL,不是下游任务准确率;续写自己的 256 个 token 不压缩;Quest 按 query head 选页,estimator 的 `retrieval` 按 KV head 计流量,略为乐观。
@@ -925,7 +928,7 @@ Qwen3-0.6B 每层每 token:K+V 2048 个元素,hidden 1024 个,存 hidden 让 KV 
 
 - 项目定位:agent 的导航仪,上界用于指方向和回答放松约束的问题,不以 reward 为设计目标(2026-10-05)。
 - 放宽程度先做 A;B、C 以后做(2026-10-05)。
-- A 级上界 = 物理上界;dispatch / commit / sync / 小 kernel 带宽损失计入方案代价,不进上界(2026-10-05)。
+- A 级按有用乘积图计数，当前数值为条件资源参考线;dispatch / commit / sync / 小 kernel 带宽损失计入方案代价,不进上界(2026-10-05)。
 - 场景:单流 decode(context 512 ~ 32k)与 prefill(prompt 16 ~ 32k),并行推进(2026-10-05)。
 - 指标:decode 每 token 时间、TTFT(L)、T_request(L, N)(2026-10-05)。
 - 设备 M4 MBA 24GB、模型 Qwen3-0.6B BF16,先固定(2026-10-05)。
@@ -934,7 +937,7 @@ Qwen3-0.6B 每层每 token:K+V 2048 个元素,hidden 1024 个,存 hidden 让 KV 
 - 片上容量 M 取实测拐点上沿(6.5)。
 - 多处理器指 GPU 的 10 个核心(私有寄存器 / threadgroup / L1,共享 L2 / SLC / DRAM),不是 CPU、GPU、ANE 三个引擎(2026-10-06)。
 - 第一张 roofline 图同时画整图界与算子边界界;整图界中尚未证明的部分用保守的 max 并标注(2026-10-06)。
-- A 级"数学等价"取"只固定乘积项":每个收缩(矩阵乘、QK^T、PV)的每个乘积项 a_ik·b_kj 至少算一次,
+- A 级"数学等价"取"只固定乘积项":有用图中每个收缩(矩阵乘、QK^T、PV)的每个乘积项 a_ik·b_kj 至少算一次,
   求和顺序、softmax 写法(含 online softmax)、融合、重算都自由。I/O 下界只能用乘积结构与必读必写推出(2026-10-06)。
   其他候选:固定图且不许重算(重算的实现可能 I/O 更低,上界不成立);固定图允许重算(排除 split-K、online softmax);
   再加代数重写(如 P(VWo)、权重吸收;Qwen3 上被 RoPE、q/k-norm 挡住或使 FLOPs 与 KV 变大,无收益);
