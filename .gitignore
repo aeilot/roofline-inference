@@ -70,6 +70,3 @@ agent-test/v2/thermstate
 agent-test/v3/results-smoke*/
 
 .venv-vllm-metal/
-
-# Claude Code local settings (per machine)
-.claude/settings.local.json
