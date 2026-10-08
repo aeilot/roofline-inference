@@ -14,8 +14,8 @@ pipeline; it cannot support a confirmatory conclusion.
 ## Agent and budget
 
 Codex CLI 0.161.0, model gpt-6.1-sol, reasoning effort medium, non-interactive (`codex exec`),
-2.5 h wall clock per run, hard stop; the engine at the last git commit is evaluated.
-Order: P1, B1, B2, P2 (sequential: one GPU, agents benchmark on it).
+2 h wall clock per run (revised from 2.5 h, see below), hard stop; the engine at the last git commit is
+evaluated. Order: P1, B1, B2, P2 (sequential: one GPU, agents benchmark on it).
 
 ## Isolation
 
@@ -39,3 +39,16 @@ each agent's predicted headroom against the measured result.
 
 Two runs per arm; agent variance is unknown and likely large. The model may already know roofline
 analysis and Apple GPU tricks. Results are descriptive and are used to size a full experiment.
+
+## Revision before the first complete run (2026-10-08 14:55)
+
+- The first P1 (started 13:10) was stopped after ~72 min because the machine could not stay on AC
+  power for the afternoon; it is kept as `runs/P1-aborted` and excluded. All four runs restart.
+- The machine is available 17:30–08:30 with possible short interruptions, so: 2 h per agent run
+  (was 2.5 h); no agent run starts after 02:30; the evaluation stops launching timed units at 08:15
+  (resumable later); `~/nav-runs/PAUSE` pauses before the next agent run or evaluation unit.
+  Order P1, B1, B2, P2 keeps one run per arm among the first two if the night is cut short.
+- `tools/bench.py` in the kit now waits for AC power with the lid open without limit and repeats a
+  measurement disturbed by power loss or sleep (previously it waited at most 5 minutes and then
+  timed on battery). Both arms get the same tool.
+- The evaluation covers every completed run, blinded (make_eval.py), 8 pairs per scenario.

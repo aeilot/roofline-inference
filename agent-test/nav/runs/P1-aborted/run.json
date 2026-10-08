@@ -1,0 +1,7 @@
+{
+ "arm": "P",
+ "run": "P1",
+ "aborted": true,
+ "reason": "stopped at user request ~72 min into 150: machine could not stay on AC power for the afternoon; excluded from evaluation, to be rerun",
+ "aborted_at": 1791487443.4325938
+}

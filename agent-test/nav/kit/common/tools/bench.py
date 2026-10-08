@@ -34,7 +34,7 @@ def worker(engine, length, gen, variant):
     import mlx.core as mx
     from mlx_lm import load
     sys.path.insert(0, str(HERE))
-    from platform_state import ready, snapshot
+    from platform_state import ready, slept_between, snapshot
     model, _ = load("Qwen/Qwen3-0.6B")
     if engine == "mlx-lm":
         from mlx_lm.generate import generate_step, generation_stream
@@ -50,15 +50,26 @@ def worker(engine, length, gen, variant):
     for _ in gen_fn(warm, min(gen, 8)):
         pass
     mx.synchronize(stream); mx.synchronize()
-    t0 = time.time()
-    while not ready(snapshot()) and time.time() - t0 < 300:
-        time.sleep(5)
-    time.sleep(2)
-    stamps, start = [], time.perf_counter()
-    for _ in gen_fn(prompt, gen):
-        stamps.append(time.perf_counter() - start)
-    mx.synchronize(stream); mx.synchronize()
-    done = time.perf_counter() - start
+    for attempt in range(5):
+        # Never time on battery or after sleep: wait (no limit) for AC power with the lid open,
+        # then up to 5 minutes for a nominal thermal state.
+        t0 = time.time()
+        while not snapshot()["on_ac"] or snapshot().get("lid_closed"):
+            print("waiting for AC power / open lid", file=sys.stderr, flush=True)
+            time.sleep(30)
+        while not ready(snapshot()) and time.time() - t0 < 300:
+            time.sleep(5)
+        time.sleep(2)
+        before = snapshot()
+        stamps, start = [], time.perf_counter()
+        for _ in gen_fn(prompt, gen):
+            stamps.append(time.perf_counter() - start)
+        mx.synchronize(stream); mx.synchronize()
+        done = time.perf_counter() - start
+        after = snapshot()
+        if before["on_ac"] and after["on_ac"] and not slept_between(before, after):
+            break
+        print("measurement disturbed (power or sleep); repeating", file=sys.stderr, flush=True)
     gaps = [b - a for a, b in zip(stamps, stamps[1:])]
     print(json.dumps(dict(ttft=stamps[0], decode=statistics.median(gaps[2:]) if len(gaps) > 4 else None,
                           request=done, n=len(stamps))))

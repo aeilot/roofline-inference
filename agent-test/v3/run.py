@@ -222,10 +222,24 @@ def wait_for_ac(out):
         time.sleep(30)
 
 
+def wait_for_pause_and_deadline(out):
+    """Navigation pilot: honour ~/nav-runs/PAUSE (the user needs the machine) and NAV_STOP_AT
+    (HHMM in the morning when the machine must be returned): stop launching units after it."""
+    pause = Path.home() / "nav-runs" / "PAUSE"
+    while pause.exists():
+        log(out, "paused (~/nav-runs/PAUSE exists)")
+        time.sleep(300)
+    stop = os.environ.get("NAV_STOP_AT")
+    if stop and int(datetime.now().strftime("%H%M")) >= int(stop) and datetime.now().hour < 12:
+        log(out, f"NAV_STOP_AT {stop} reached: stopping; rerun the same command to resume")
+        sys.exit(3)
+
+
 def run_unit(u, out, probe_ref):
     dst = out / "runs" / f"s{u['session']}-{u['id']}.json"
     if dst.exists():
         return "skip"
+    wait_for_pause_and_deadline(out)
     wait_for_ac(out)
     worker_py = PY
     cmd = [worker_py, str(HERE / "worker.py"), "--engine", u["engine"], "--kind", u["kind"], "--length", str(u["length"]),
