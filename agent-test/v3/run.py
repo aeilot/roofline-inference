@@ -68,6 +68,18 @@ FROZEN = [V2 / f for f in ["engine.py", "kernels.py", "attention.py", "thermal.p
 FROZEN += sorted((HERE / "corpus").iterdir())
 FROZEN += [HERE / "CONFIRM.md", HERE / "environment-vllm-metal.json", HERE / "run_both.sh"]
 
+# Navigation pilot evaluation (agent-test/nav/PILOT.md): E0 vs blinded agent-built engines named in the
+# JSON file given by NAV_CANDIDATES. Their files are frozen like the rest of the code under test.
+_NAV = json.loads(Path(os.environ["NAV_CANDIDATES"]).read_text()) if os.environ.get("NAV_CANDIDATES") else {}
+if _NAV:
+    PROFILES["nav"] = dict(
+        pairs={s: 8 for s in ("ttft16", "ttft64", "ttft256", "ttft1024", "ctx512", "ctx4096",
+                              "ctx32768", "req256x256")},
+        regimes=["idle"], gate="group", ablation_blocks=0, carryover_blocks=0,
+        engines=["E0"] + sorted(_NAV), gate_engines=["E0"] + sorted(_NAV), analysis="nav_pilot")
+    for _d in _NAV.values():
+        FROZEN += sorted(Path(_d).rglob("*.py"))
+
 
 def session_of(block):
     return 1 if block % 4 in (0, 3) else 2       # each session gets both prompt kinds
@@ -294,7 +306,8 @@ def main():
             gate = json.loads(gate_file.read_text())
             log(out, f"gate: {'PASS' if gate['all_pass'] else 'FAIL'} "
                      f"{ {k: v['pass'] for k, v in gate['engines'].items()} }")
-            if any(not gate["engines"].get(e, {}).get("pass") for e in ("E0", "E2")) or gate["unit_tests"]["returncode"]:
+            required = ("E0", "E2") if "E2" in PROFILES[args.profile].get("engines", ["E2"]) else ("E0",)
+            if any(not gate["engines"].get(e, {}).get("pass") for e in required) or gate["unit_tests"]["returncode"]:
                 sys.exit("E0 or E2 failed the numerical gate; timing results would be meaningless. Stopping.")
 
         if args.profile == "confirm" and not args.skip_gate:
@@ -332,6 +345,8 @@ def main():
         subprocess.run([PY, str(HERE / "divergence.py"), "--results", str(out)], check=True)
         log(out, "analysis")
         subprocess.run([PY, str(HERE / "analyze.py"), "--results", str(out)], check=True)
+        if args.profile == "nav":
+            subprocess.run([PY, str(HERE.parent / "nav" / "nav_analyze.py"), "--results", str(out)], check=True)
         manifest["finished"] = datetime.now().isoformat()
         mf.write_text(json.dumps(manifest, indent=1))
         log(out, f"session {session} done -> {out / 'report-corrected.md'}")
