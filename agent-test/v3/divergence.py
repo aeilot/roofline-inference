@@ -3,8 +3,13 @@
 For every main-phase group (session, regime, block, scenario), compare each
 engine's tokens with E0's. At the first differing position j, run the FP32
 model on prompt + E0 tokens[:j] and record the FP32 logit gap between the two
-chosen tokens. A divergence is acceptable only if the gap is below E0's p99
-top-2 margin noise from the correctness gate. Results are cached.
+chosen tokens. A divergence invalidates the engine's result only if the engine
+chose the token FP32 rates LOWER than E0's choice by more than E0's p99 top-2
+margin noise from the correctness gate (signed rule). If the engine's token is
+the FP32-preferred one, the deviation is E0's own and is recorded as such
+(confirm smoke 2026-10-07: E2 and vLLM agreed on FP32's top token at a 4k
+context while mlx-lm's choice was 0.252 lower; the unsigned rule would have
+voided E2). Results are cached.
 """
 from __future__ import annotations
 
@@ -63,7 +68,7 @@ def main():
 
     model32 = None
     for cid, key, eng, u, base, j, other in todo:
-        if cid in cache:
+        if cid in cache and "e0_minus_other" in cache[cid]:
             continue
         if model32 is None:
             from mlx_lm import load
@@ -76,18 +81,24 @@ def main():
             model32(seq[:, s:min(s + 2048, seq.shape[1] - 1)], cache=c)
             mx.eval([x.state for x in c])
         logits = model32(seq[:, -1:], cache=c)[0, -1]
-        gap = abs(logits[base[j]] - logits[other]).item()
-        cache[cid] = dict(position=j, e0_token=base[j], other_token=other, fp32_gap=gap)
+        diff = (logits[base[j]] - logits[other]).item()
+        cache[cid] = dict(position=j, e0_token=base[j], other_token=other, fp32_gap=abs(diff),
+                          e0_minus_other=diff, fp32_argmax=mx.argmax(logits).item())
         cache_file.write_text(json.dumps(cache, indent=1))
 
     records = []
     for cid, key, eng, u, base, j, other in todo:
         c = cache[cid]
         records.append(dict(session=key[0], regime=key[1], block=key[2], scenario=key[3], engine=eng, **c,
-                            threshold=threshold, near_tie=threshold is not None and c["fp32_gap"] < threshold))
+                            threshold=threshold, near_tie=threshold is not None and c["fp32_gap"] < threshold,
+                            # engine's token rated lower than E0's by more than the noise: invalidates
+                            invalidates=threshold is None or c["e0_minus_other"] > threshold,
+                            # engine's token rated higher than E0's beyond the noise: E0 deviated
+                            e0_deviated=threshold is not None and -c["e0_minus_other"] > threshold))
     (results / "divergence_records.json").write_text(json.dumps(records, indent=1))
-    bad = [r for r in records if not r["near_tie"]]
-    print(f"{len(records)} divergences, {len(bad)} not FP32 near-ties")
+    bad = [r for r in records if r["invalidates"]]
+    print(f"{len(records)} divergences, {len(bad)} where the engine's token is FP32-worse beyond noise, "
+          f"{sum(r['e0_deviated'] for r in records)} where E0 deviated beyond noise")
 
 
 if __name__ == "__main__":

@@ -60,11 +60,13 @@ def main():
                 model32.set_dtype(mx.float32)
             logits = adapters.E0(model32).teacher_forced(
                 prompts.make_prompt(f["kind"], f["length"], 2000000), a0["tokens"][:j+1])[-1]
-            gap = abs(logits[a0["tokens"][j]] - logits[v0["tokens"][j]]).item()
-            f["first_divergence"] = dict(position=j, fp32_gap=gap, threshold=threshold)
-            f["pass"] = gap < threshold
+            diff = (logits[a0["tokens"][j]] - logits[v0["tokens"][j]]).item()
+            # Signed rule (same as divergence.py): fail only if vLLM's token is rated
+            # lower than E0's by more than the noise; an FP32-better vLLM token passes.
+            f["first_divergence"] = dict(position=j, fp32_gap=abs(diff), e0_minus_v0=diff, threshold=threshold)
+            f["pass"] = diff < threshold
     passed = reference["all_pass"] and all(x["pass"] for x in fixtures)
-    Path(a.out).write_text(json.dumps(dict(fixtures=fixtures, criterion="exact_or_first_divergence_FP32_near_tie",
+    Path(a.out).write_text(json.dumps(dict(fixtures=fixtures, criterion="exact_or_first_divergence_not_FP32_worse_than_E0_beyond_noise",
         **{"pass": passed}), indent=2))
 
 

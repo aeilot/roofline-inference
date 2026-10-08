@@ -129,7 +129,8 @@ def main():
     summary = dict(analysis="post_collection_sign_median_v1",
                    inference_assumptions="Independent pairs conditional on observed sessions; exploratory on existing data",
                    sessions=sessions, primary={}, secondary={}, ablation={}, carryover={},
-                   exclusions={}, divergences=dict(total=len(divs), not_near_tie=sum(not d["near_tie"] for d in divs)))
+                   exclusions={}, divergences=dict(total=len(divs), invalidating=sum(d.get("invalidates", not d["near_tie"]) for d in divs),
+                                     e0_deviated=sum(d.get("e0_deviated", False) for d in divs)))
 
     lines = ["# v3 验证结果", "",
              f"方案：{plan.get('profile', 'full')}；时段：{sessions}；有效计时 {len(runs)} 次，排除 {len(excluded)} 次。", "",
@@ -177,14 +178,14 @@ def main():
                 rows.append((sid, lr, *boot(lr)))
             adj = holm([r[5] for r in rows] + [1.0] * (len(sids) - len(rows)))[:len(rows)] if rows else []
             for (sid, lr, m, lo, hi, p, per), padj in zip(rows, adj):
-                bad = any(d["regime"] == regime and d["scenario"] == sid and d["engine"] == "E2" and not d["near_tie"] for d in divs)
+                bad = any(d["regime"] == regime and d["scenario"] == sid and d["engine"] == "E2" and d.get("invalidates", not d["near_tie"]) for d in divs)
                 n = sum(len(v) for v in lr.values())
                 if quality_invalid:
                     verdict = "作废（正确性或冻结记录）"
                 elif awaiting_s2:
                     verdict = "等待第二个时段"
                 elif bad:
-                    verdict = "作废（非近似平局的分叉）"
+                    verdict = "作废（引擎选择在 FP32 下劣于 E0，超出噪声）"
                 elif n < (planned.get(sid, MIN_PAIRS) if prospective else MIN_PAIRS) or min(len(v) for v in lr.values()) < MIN_PER_SESSION:
                     verdict = "样本不足"
                 elif padj < 0.05 and len(per) >= 2 and all(v > 0 for v in per.values()):
@@ -216,7 +217,7 @@ def main():
                     b = boot(lr)
                     n = sum(len(v) for v in lr.values())
                     bad = any(d["scenario"] == sid and d["engine"] in ("V0", denominator)
-                              and not d["near_tie"] for d in divs)
+                              and d.get("invalidates", not d["near_tie"]) for d in divs)
                     valid = (not quality_invalid and len(vg) == 2 and all(g["pass"] for g in vg)
                              and not bad and n == planned.get(sid) and len(lr) == 2)
                     state = "完整；经验筛查通过" if valid else "暂定或作废（缺失/正确性记录）"
@@ -327,7 +328,8 @@ def main():
               "已记录的数值门槛（经验筛查，不是质量非劣证明）：" + "; ".join(
                   f"{k}: " + ", ".join(f"{e}={'通过' if v['pass'] else '未通过'}" for e, v in g["engines"].items())
                   for k, g in gates.items()), "",
-              f"生成序列分叉：{len(divs)} 处，其中非 FP32 近似平局 {summary['divergences']['not_near_tie']} 处"
+              f"生成序列分叉：{len(divs)} 处；其中引擎的选择在 FP32 下劣于 E0 且超出噪声（导致作废）{summary['divergences']['invalidating']} 处，"
+              f"E0 自身偏离 FP32 超出噪声 {summary['divergences']['e0_deviated']} 处"
               f"（阈值 = E0 的 p99 margin 噪声）。", "",
               "排除记录（重试后仍被排除）：" + (", ".join(f"{k[0]}/{k[1]}: {v}" for k, v in reasons.items()) or "无"), "",
               f"按事先登记的规则重试过一次的单元：{len(retried)} 个（首次尝试的记录保存在 runs/retried/）。", "",
