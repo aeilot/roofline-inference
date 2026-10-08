@@ -203,11 +203,53 @@ class _NoPrefuse(v2engine.Engine):
         return (h @ self.embed.T)[None]
 
 
+def candidates():
+    """Navigation-experiment candidate engines: {name: directory with engine.py}, from the JSON
+    file named by NAV_CANDIDATES (blinded names like C-1 ... C-4)."""
+    import json
+    import os
+    f = os.environ.get("NAV_CANDIDATES")
+    return json.loads(Path(f).read_text()) if f else {}
+
+
+class Candidate:
+    """An agent-built engine with the navigation-task API: Engine(model), .stream,
+    new_cache(capacity), forward(tokens [1, n], cache) -> last-position logits [vocab],
+    generate(prompt, max_tokens)."""
+
+    def __init__(self, model, path):
+        import importlib
+        path = Path(path)
+        # The candidate's own modules must win over agent-test/v2's (same names, e.g. engine, kernels).
+        for stem in [p.stem for p in path.glob("*.py")] + ["engine"]:
+            sys.modules.pop(stem, None)
+        sys.path.insert(0, str(path))
+        self.engine = importlib.import_module("engine").Engine(model)
+        self.stream = self.engine.stream
+
+    def generate(self, prompt, max_tokens):
+        return self.engine.generate(prompt, max_tokens)
+
+    def teacher_forced(self, prompt, cont):
+        e = self.engine
+        full = mx.array(prompt + cont)[None]
+        L = len(prompt)
+        cache = e.new_cache(L + len(cont) + 1)
+        out = [e.forward(full[:, :L], cache)]
+        mx.eval(out[-1])
+        for j in range(1, len(cont)):
+            out.append(e.forward(full[:, L - 1 + j:L + j], cache))
+            mx.eval(out[-1])
+        return out
+
+
 def make(name, model):
     if name == "E0":
         return E0(model)
     if name == "E1":
         return E1(model)
+    if name in candidates():
+        return Candidate(model, candidates()[name])
     cls = {"E2": v2engine.Engine, "E2-nogqa": v2engine.Engine, "E2-noskinny": _NoSkinny,
            "E2-nogemv": _NoGemv, "E2-noprefuse": _NoPrefuse}[name]
     kwargs = {"attn_impl": "mlx"} if name == "E2-nogqa" else {}

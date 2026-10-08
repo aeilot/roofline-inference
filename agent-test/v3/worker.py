@@ -76,7 +76,7 @@ def timed(adapter, prompt, gen):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--engine", required=True, choices=adapters.ENGINES + ["V0"])
+    p.add_argument("--engine", required=True, choices=adapters.ENGINES + ["V0"] + list(adapters.candidates()))
     p.add_argument("--kind", required=True, choices=["random", "text"])
     p.add_argument("--length", type=int, required=True)
     p.add_argument("--variant", type=int, required=True)
