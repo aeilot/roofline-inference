@@ -1,0 +1,118 @@
+{
+ "session": 2,
+ "started": "2026-10-08T04:28:32.902370",
+ "git_head": "a89b226a0a68929202340561af21f565d7f8462d",
+ "git_dirty": false,
+ "files": {
+  "agent-test/v2/engine.py": "6d5dbf77300f03e14efdb05d22860747a25f674185714abbb88b037cb7b2c5be",
+  "agent-test/v2/kernels.py": "3c190969a39a823c074e875e439018301ece56e44ca76c462b27fda5641de5d4",
+  "agent-test/v2/attention.py": "d832142817f95615f6d28cd53fed7fa840e5210ff781402190df018e13cdd198",
+  "agent-test/v2/thermal.py": "5872787df9404f4a80884e2afd503ba45400887972bca672bca02afc4e4c1d20",
+  "agent-test/v2/check.py": "28b5cc156d286197f30dd29e4988211987e35a1821ed0a5d69642f7f508a73e7",
+  "agent-test/v2/test_engine.py": "6d953bb644d9d32f8e73cb7ad3a64eb168821d3762f5796f2159a807d3ee3bd1",
+  "agent-test/v2/skinny_table.json": "168dd7aa8addf1f929c3e32ab8f07d5d48685ab9de4e9d0d1d4ca8f1489bdcc7",
+  "agent-test/v3/adapters.py": "4fd9c5a6554c9126121bc29e4e50ec4f00af6ad91b1eb8cc1fce10e673377a0a",
+  "agent-test/v3/analyze.py": "d7e269314e19132b210bae71c8ef305e19f6aad10f46109a18b79e73e1d78157",
+  "agent-test/v3/analyze_preregistered.py": "5300f9ede84466ba14ce346dfd8bc69e5938121f7240f60646b1517a3950aefb",
+  "agent-test/v3/divergence.py": "a8b37c2866e903997020a23bc2cc8965cf00d157d319c4704aaf333dc2b0b5b1",
+  "agent-test/v3/gate.py": "f1fb49f35f4c974f592e5e0bb1e91798327025d6248738a7df23ebed8926203b",
+  "agent-test/v3/prompts.py": "e765c416cf0d8ad18eb1d57e2324b97f51230e362d3740773c05ada36bbf1b15",
+  "agent-test/v3/run.py": "9f61bbdb32203c54e7657ec10d9ec72df1db4b6e2a139cc931052b085e2dc565",
+  "agent-test/v3/vllm_adapter.py": "0476c6489f0c423b034c54d2d9cacac148df4fa1d34261c4609cd7c74501c3f5",
+  "agent-test/v3/vllm_gate.py": "5c7320c55511c3d05184c8ba3427110c063405f9db27983c0f16e54baee2068a",
+  "agent-test/v3/worker.py": "a401e60ef83684a0bf88c34eec578275c5e136c57b0a92f7cc3738526ec612e8",
+  "agent-test/v3/corpus/0-docs__report.md": "bdddf4c578b76e875bfdbb52e3b50436e1e69b4533255a03a78215eb15a6bb72",
+  "agent-test/v3/corpus/1-README.md": "34ef417eca24735dd4a713c506b53279948ce109717ad296cd4f474af3448353",
+  "agent-test/v3/corpus/2-docs__design-notes.md": "30b165181fd2d12350429d7da3049d011929a7ea68ddd73c7b0d955a435c3408",
+  "agent-test/v3/corpus/3-agent-test__v2__engine.py": "6d5dbf77300f03e14efdb05d22860747a25f674185714abbb88b037cb7b2c5be",
+  "agent-test/v3/corpus/4-agent-test__v2__kernels.py": "3c190969a39a823c074e875e439018301ece56e44ca76c462b27fda5641de5d4",
+  "agent-test/v3/corpus/5-agent-test__v2__README.md": "406109a2f58a719f7cb66bde2d0508b4dafbc6158c3ce0ceb820caca75ce186d",
+  "agent-test/v3/corpus/SOURCE.txt": "c40abed22a9fa949d807470cf60c4fe1bb4e6d702406e387e9198fc9015cbe3e",
+  "agent-test/v3/CONFIRM.md": "52384ee7392e06cc3c72eb3f6461c118a4d6e63038dcb94653b6143b2b95f08f",
+  "agent-test/v3/environment-vllm-metal.json": "d83cb823dab1c57852d3d4d48d5f822bd74ddb6bc6d3f0df492081f776fc1e21",
+  "agent-test/v3/run_both.sh": "162a7a099e5a40bac5f42fb9dfeb6fc0ffebb30650bfa59112c96f23704d6056"
+ },
+ "mlx": "0.32.1",
+ "mlx_lm": "0.32.0",
+ "macos": "27.0.1",
+ "device": {
+  "device_name": "Apple M4",
+  "max_recommended_working_set_size": 19069665280,
+  "memory_size": 25769803776,
+  "architecture": "applegpu_g16g",
+  "max_buffer_length": 14302248960,
+  "resource_limit": 499000
+ },
+ "on_ac_power": true,
+ "python": "3.12.13 (main, Mar  3 2026, 12:39:30) [Clang 21.0.0 (clang-2100.0.123.102)]",
+ "seed": 20261006,
+ "environment": {
+  "model_snapshot": "c1899de289a04d12100db370d81485cdf75e47ca",
+  "weights": {
+   "model.safetensors": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"
+  },
+  "plan": {
+   "pairs": {
+    "ttft16": 24,
+    "ttft64": 24,
+    "ttft256": 24,
+    "ttft1024": 24,
+    "ctx512": 24,
+    "ctx4096": 24,
+    "ctx32768": 24,
+    "req256x256": 24,
+    "req4096x128": 24
+   },
+   "regimes": [
+    "idle"
+   ],
+   "gate": "unit",
+   "ablation_blocks": 0,
+   "carryover_blocks": 0,
+   "engines": [
+    "E0",
+    "E2",
+    "V0"
+   ],
+   "gate_engines": [
+    "E0",
+    "E2"
+   ],
+   "analysis": "prospective_sign_median_v2",
+   "comparator": "official vLLM + vllm-metal"
+  },
+  "packages": {
+   "mlx": "0.32.1",
+   "mlx-lm": "0.32.0",
+   "numpy": "2.3.5",
+   "transformers": "5.19.0"
+  },
+  "vllm_packages": {
+   "vllm": "0.30.0+cpu",
+   "vllm-metal": "0.30.0",
+   "mlx": "0.32.1",
+   "mlx-lm": "0.32.0",
+   "torch": "2.13.0",
+   "transformers": "5.19.0"
+  },
+  "package_origins": {
+   "mlx": null,
+   "mlx-lm": "{\"url\":\"https://github.com/ml-explore/mlx-lm\",\"vcs_info\":{\"vcs\":\"git\",\"commit_id\":\"9e6acca691e64d6d8bb808c328fcdea459099cca\",\"requested_revision\":\"9e6acca691e64d6d8bb808c328fcdea459099cca\"}}",
+   "transformers": null,
+   "numpy": null,
+   "vllm": "{\"url\":\"https://github.com/vllm-project/vllm/releases/download/v0.30.0/vllm-0.30.0%2Bcpu-cp312-cp312-macosx_11_0_arm64.whl\",\"archive_info\":{}}",
+   "vllm-metal": "{\"url\":\"https://github.com/vllm-project/vllm-metal/releases/download/v0.30.0/vllm_metal-0.30.0-cp312-cp312-macosx_15_0_arm64.whl\",\"archive_info\":{}}",
+   "torch": null
+  },
+  "model_metadata": {
+   "config.json": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+   "generation_config.json": "2325da0f15bb848e018c5ae071b7943332e9f871d6b60e2ed22ca97d4cb993d2",
+   "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+   "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+   "vocab.json": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+  }
+ },
+ "profile": "confirm",
+ "probe_ref_ms": 10.841791983693838,
+ "finished": "2026-10-08T08:14:24.978652"
+}

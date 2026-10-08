@@ -1,0 +1,730 @@
+{
+ "random-4096-0-9-151668-151644": {
+  "position": 9,
+  "e0_token": 151668,
+  "other_token": 151644,
+  "fp32_gap": 0.2519798278808594,
+  "e0_minus_other": -0.2519798278808594,
+  "fp32_argmax": 151644
+ },
+ "random-512-0-68-1467-2213": {
+  "position": 68,
+  "e0_token": 1467,
+  "other_token": 2213,
+  "fp32_gap": 0.10952186584472656,
+  "e0_minus_other": -0.10952186584472656,
+  "fp32_argmax": 2213
+ },
+ "random-256-0-0-144073-128668": {
+  "position": 0,
+  "e0_token": 144073,
+  "other_token": 128668,
+  "fp32_gap": 0.05371665954589844,
+  "e0_minus_other": 0.05371665954589844,
+  "fp32_argmax": 144073
+ },
+ "text-4096-3-29-75636-375": {
+  "position": 29,
+  "e0_token": 75636,
+  "other_token": 375,
+  "fp32_gap": 0.18372154235839844,
+  "e0_minus_other": 0.18372154235839844,
+  "fp32_argmax": 75636
+ },
+ "text-512-3-25-8-593": {
+  "position": 25,
+  "e0_token": 8,
+  "other_token": 593,
+  "fp32_gap": 0.03627777099609375,
+  "e0_minus_other": 0.03627777099609375,
+  "fp32_argmax": 8
+ },
+ "random-512-4-48-15946-102298": {
+  "position": 48,
+  "e0_token": 15946,
+  "other_token": 102298,
+  "fp32_gap": 0.042667388916015625,
+  "e0_minus_other": -0.042667388916015625,
+  "fp32_argmax": 102298
+ },
+ "random-512-4-0-271-198": {
+  "position": 0,
+  "e0_token": 271,
+  "other_token": 198,
+  "fp32_gap": 0.012960433959960938,
+  "e0_minus_other": 0.012960433959960938,
+  "fp32_argmax": 271
+ },
+ "random-256-4-10-15-16": {
+  "position": 10,
+  "e0_token": 15,
+  "other_token": 16,
+  "fp32_gap": 0.10019683837890625,
+  "e0_minus_other": -0.10019683837890625,
+  "fp32_argmax": 16
+ },
+ "random-1024-4-2-630-198": {
+  "position": 2,
+  "e0_token": 630,
+  "other_token": 198,
+  "fp32_gap": 0.0002040863037109375,
+  "e0_minus_other": -0.0002040863037109375,
+  "fp32_argmax": 198
+ },
+ "text-512-7-19-18493-102347": {
+  "position": 19,
+  "e0_token": 18493,
+  "other_token": 102347,
+  "fp32_gap": 0.033326148986816406,
+  "e0_minus_other": 0.033326148986816406,
+  "fp32_argmax": 18493
+ },
+ "text-256-7-62-77288-103124": {
+  "position": 62,
+  "e0_token": 77288,
+  "other_token": 103124,
+  "fp32_gap": 0.04323768615722656,
+  "e0_minus_other": -0.04323768615722656,
+  "fp32_argmax": 103124
+ },
+ "text-256-7-162-29767-20450": {
+  "position": 162,
+  "e0_token": 29767,
+  "other_token": 20450,
+  "fp32_gap": 0.06890201568603516,
+  "e0_minus_other": 0.06890201568603516,
+  "fp32_argmax": 29767
+ },
+ "random-4096-8-9-102298-87026": {
+  "position": 9,
+  "e0_token": 102298,
+  "other_token": 87026,
+  "fp32_gap": 0.08233928680419922,
+  "e0_minus_other": 0.08233928680419922,
+  "fp32_argmax": 102298
+ },
+ "random-4096-8-48-54998-81772": {
+  "position": 48,
+  "e0_token": 54998,
+  "other_token": 81772,
+  "fp32_gap": 0.02862548828125,
+  "e0_minus_other": -0.02862548828125,
+  "fp32_argmax": 81772
+ },
+ "random-512-8-43-594-2578": {
+  "position": 43,
+  "e0_token": 594,
+  "other_token": 2578,
+  "fp32_gap": 0.01763153076171875,
+  "e0_minus_other": -0.01763153076171875,
+  "fp32_argmax": 2578
+ },
+ "random-256-8-39-105395-99107": {
+  "position": 39,
+  "e0_token": 105395,
+  "other_token": 99107,
+  "fp32_gap": 0.021104812622070312,
+  "e0_minus_other": -0.021104812622070312,
+  "fp32_argmax": 99107
+ },
+ "text-4096-11-3-59743-43288": {
+  "position": 3,
+  "e0_token": 59743,
+  "other_token": 43288,
+  "fp32_gap": 0.018331527709960938,
+  "e0_minus_other": -0.018331527709960938,
+  "fp32_argmax": 43288
+ },
+ "text-512-11-16-9370-80443": {
+  "position": 16,
+  "e0_token": 9370,
+  "other_token": 80443,
+  "fp32_gap": 0.04922008514404297,
+  "e0_minus_other": -0.04922008514404297,
+  "fp32_argmax": 80443
+ },
+ "text-256-11-124-32108-62926": {
+  "position": 124,
+  "e0_token": 32108,
+  "other_token": 62926,
+  "fp32_gap": 0.1725330352783203,
+  "e0_minus_other": -0.1725330352783203,
+  "fp32_argmax": 62926
+ },
+ "text-256-11-4-99338-30709": {
+  "position": 4,
+  "e0_token": 99338,
+  "other_token": 30709,
+  "fp32_gap": 0.018236160278320312,
+  "e0_minus_other": 0.018236160278320312,
+  "fp32_argmax": 99338
+ },
+ "text-1024-11-4-902-481": {
+  "position": 4,
+  "e0_token": 902,
+  "other_token": 481,
+  "fp32_gap": 0.25415515899658203,
+  "e0_minus_other": 0.25415515899658203,
+  "fp32_argmax": 902
+ },
+ "random-4096-12-33-11-2038": {
+  "position": 33,
+  "e0_token": 11,
+  "other_token": 2038,
+  "fp32_gap": 0.0341033935546875,
+  "e0_minus_other": 0.0341033935546875,
+  "fp32_argmax": 11
+ },
+ "random-4096-12-0-13-17642": {
+  "position": 0,
+  "e0_token": 13,
+  "other_token": 17642,
+  "fp32_gap": 0.01381683349609375,
+  "e0_minus_other": -0.01381683349609375,
+  "fp32_argmax": 17642
+ },
+ "random-256-12-15-4977-5868": {
+  "position": 15,
+  "e0_token": 4977,
+  "other_token": 5868,
+  "fp32_gap": 0.07507514953613281,
+  "e0_minus_other": -0.07507514953613281,
+  "fp32_argmax": 5868
+ },
+ "random-256-12-22-11-323": {
+  "position": 22,
+  "e0_token": 11,
+  "other_token": 323,
+  "fp32_gap": 0.15947723388671875,
+  "e0_minus_other": -0.15947723388671875,
+  "fp32_argmax": 323
+ },
+ "random-64-12-0-261-2011": {
+  "position": 0,
+  "e0_token": 261,
+  "other_token": 2011,
+  "fp32_gap": 0.00630950927734375,
+  "e0_minus_other": 0.00630950927734375,
+  "fp32_argmax": 261
+ },
+ "text-32768-15-26-8-701": {
+  "position": 26,
+  "e0_token": 8,
+  "other_token": 701,
+  "fp32_gap": 0.08064937591552734,
+  "e0_minus_other": -0.08064937591552734,
+  "fp32_argmax": 701
+ },
+ "text-4096-15-35-1029-2224": {
+  "position": 35,
+  "e0_token": 1029,
+  "other_token": 2224,
+  "fp32_gap": 0.24004364013671875,
+  "e0_minus_other": 0.24004364013671875,
+  "fp32_argmax": 1029
+ },
+ "text-4096-15-116-569-87": {
+  "position": 116,
+  "e0_token": 569,
+  "other_token": 87,
+  "fp32_gap": 0.018682479858398438,
+  "e0_minus_other": 0.018682479858398438,
+  "fp32_argmax": 569
+ },
+ "text-512-15-3-16-29258": {
+  "position": 3,
+  "e0_token": 16,
+  "other_token": 29258,
+  "fp32_gap": 0.0060443878173828125,
+  "e0_minus_other": -0.0060443878173828125,
+  "fp32_argmax": 29258
+ },
+ "text-256-15-67-71817-101921": {
+  "position": 67,
+  "e0_token": 71817,
+  "other_token": 101921,
+  "fp32_gap": 0.02712535858154297,
+  "e0_minus_other": -0.02712535858154297,
+  "fp32_argmax": 101921
+ },
+ "random-32768-16-0-13-17642": {
+  "position": 0,
+  "e0_token": 13,
+  "other_token": 17642,
+  "fp32_gap": 0.016997337341308594,
+  "e0_minus_other": -0.016997337341308594,
+  "fp32_argmax": 17642
+ },
+ "random-32768-16-0-13-198": {
+  "position": 0,
+  "e0_token": 13,
+  "other_token": 198,
+  "fp32_gap": 0.00945281982421875,
+  "e0_minus_other": 0.00945281982421875,
+  "fp32_argmax": 17642
+ },
+ "random-256-16-0-198-315": {
+  "position": 0,
+  "e0_token": 198,
+  "other_token": 315,
+  "fp32_gap": 0.08300209045410156,
+  "e0_minus_other": -0.08300209045410156,
+  "fp32_argmax": 315
+ },
+ "random-64-16-7-64850-18411": {
+  "position": 7,
+  "e0_token": 64850,
+  "other_token": 18411,
+  "fp32_gap": 0.016776084899902344,
+  "e0_minus_other": -0.016776084899902344,
+  "fp32_argmax": 18411
+ },
+ "text-32768-19-67-1199-2427": {
+  "position": 67,
+  "e0_token": 1199,
+  "other_token": 2427,
+  "fp32_gap": 0.022731781005859375,
+  "e0_minus_other": -0.022731781005859375,
+  "fp32_argmax": 2427
+ },
+ "text-32768-19-2-389-320": {
+  "position": 2,
+  "e0_token": 389,
+  "other_token": 320,
+  "fp32_gap": 0.0008640289306640625,
+  "e0_minus_other": 0.0008640289306640625,
+  "fp32_argmax": 389
+ },
+ "text-4096-19-60-66963-25": {
+  "position": 60,
+  "e0_token": 66963,
+  "other_token": 25,
+  "fp32_gap": 0.0887451171875,
+  "e0_minus_other": 0.0887451171875,
+  "fp32_argmax": 66963
+ },
+ "text-4096-19-20-103983-86119": {
+  "position": 20,
+  "e0_token": 103983,
+  "other_token": 86119,
+  "fp32_gap": 0.015533447265625,
+  "e0_minus_other": 0.015533447265625,
+  "fp32_argmax": 103983
+ },
+ "text-512-19-102-99999-77288": {
+  "position": 102,
+  "e0_token": 99999,
+  "other_token": 77288,
+  "fp32_gap": 0.031681060791015625,
+  "e0_minus_other": 0.031681060791015625,
+  "fp32_argmax": 99999
+ },
+ "text-512-19-82-1773-11": {
+  "position": 82,
+  "e0_token": 1773,
+  "other_token": 11,
+  "fp32_gap": 0.07896995544433594,
+  "e0_minus_other": 0.07896995544433594,
+  "fp32_argmax": 1773
+ },
+ "text-16-19-3-20450-99604": {
+  "position": 3,
+  "e0_token": 20450,
+  "other_token": 99604,
+  "fp32_gap": 0.046090126037597656,
+  "e0_minus_other": -0.046090126037597656,
+  "fp32_argmax": 99604
+ },
+ "random-32768-20-1-13-14731": {
+  "position": 1,
+  "e0_token": 13,
+  "other_token": 14731,
+  "fp32_gap": 0.04189586639404297,
+  "e0_minus_other": 0.04189586639404297,
+  "fp32_argmax": 13
+ },
+ "random-1024-20-0-46-40": {
+  "position": 0,
+  "e0_token": 46,
+  "other_token": 40,
+  "fp32_gap": 0.06641960144042969,
+  "e0_minus_other": 0.06641960144042969,
+  "fp32_argmax": 46
+ },
+ "text-32768-23-57-15-353": {
+  "position": 57,
+  "e0_token": 15,
+  "other_token": 353,
+  "fp32_gap": 0.07104682922363281,
+  "e0_minus_other": -0.07104682922363281,
+  "fp32_argmax": 353
+ },
+ "text-4096-23-32-1447-20412": {
+  "position": 32,
+  "e0_token": 1447,
+  "other_token": 20412,
+  "fp32_gap": 0.010304450988769531,
+  "e0_minus_other": -0.010304450988769531,
+  "fp32_argmax": 20412
+ },
+ "text-512-23-9-42-55": {
+  "position": 9,
+  "e0_token": 42,
+  "other_token": 55,
+  "fp32_gap": 0.0069484710693359375,
+  "e0_minus_other": -0.0069484710693359375,
+  "fp32_argmax": 55
+ },
+ "text-512-23-29-48-80": {
+  "position": 29,
+  "e0_token": 48,
+  "other_token": 80,
+  "fp32_gap": 0.09862327575683594,
+  "e0_minus_other": -0.09862327575683594,
+  "fp32_argmax": 80
+ },
+ "text-256-23-62-48-41": {
+  "position": 62,
+  "e0_token": 48,
+  "other_token": 41,
+  "fp32_gap": 0.012309074401855469,
+  "e0_minus_other": -0.012309074401855469,
+  "fp32_argmax": 41
+ },
+ "text-1024-23-4-1614-41146": {
+  "position": 4,
+  "e0_token": 1614,
+  "other_token": 41146,
+  "fp32_gap": 0.04331779479980469,
+  "e0_minus_other": -0.04331779479980469,
+  "fp32_argmax": 41146
+ },
+ "text-16-23-0-28996-1921": {
+  "position": 0,
+  "e0_token": 28996,
+  "other_token": 1921,
+  "fp32_gap": 0.03922271728515625,
+  "e0_minus_other": -0.03922271728515625,
+  "fp32_argmax": 1921
+ },
+ "text-32768-1-0-3950-66017": {
+  "position": 0,
+  "e0_token": 3950,
+  "other_token": 66017,
+  "fp32_gap": 0.07497119903564453,
+  "e0_minus_other": -0.07497119903564453,
+  "fp32_argmax": 66017
+ },
+ "text-4096-1-26-220-54851": {
+  "position": 26,
+  "e0_token": 220,
+  "other_token": 54851,
+  "fp32_gap": 0.05146598815917969,
+  "e0_minus_other": -0.05146598815917969,
+  "fp32_argmax": 54851
+ },
+ "text-4096-1-19-1051-99329": {
+  "position": 19,
+  "e0_token": 1051,
+  "other_token": 99329,
+  "fp32_gap": 0.08250141143798828,
+  "e0_minus_other": 0.08250141143798828,
+  "fp32_argmax": 1051
+ },
+ "text-512-1-2-13-15": {
+  "position": 2,
+  "e0_token": 13,
+  "other_token": 15,
+  "fp32_gap": 0.06795692443847656,
+  "e0_minus_other": -0.06795692443847656,
+  "fp32_argmax": 15
+ },
+ "text-256-1-10-15-21": {
+  "position": 10,
+  "e0_token": 15,
+  "other_token": 21,
+  "fp32_gap": 0.07473945617675781,
+  "e0_minus_other": -0.07473945617675781,
+  "fp32_argmax": 21
+ },
+ "random-512-2-3-9813-220": {
+  "position": 3,
+  "e0_token": 9813,
+  "other_token": 220,
+  "fp32_gap": 0.13403987884521484,
+  "e0_minus_other": 0.13403987884521484,
+  "fp32_argmax": 9813
+ },
+ "text-32768-5-73-46944-101039": {
+  "position": 73,
+  "e0_token": 46944,
+  "other_token": 101039,
+  "fp32_gap": 0.3105316162109375,
+  "e0_minus_other": -0.3105316162109375,
+  "fp32_argmax": 101039
+ },
+ "text-32768-5-42-8997-624": {
+  "position": 42,
+  "e0_token": 8997,
+  "other_token": 624,
+  "fp32_gap": 0.14759445190429688,
+  "e0_minus_other": 0.14759445190429688,
+  "fp32_argmax": 8997
+ },
+ "text-4096-5-35-106080-111390": {
+  "position": 35,
+  "e0_token": 106080,
+  "other_token": 111390,
+  "fp32_gap": 0.034760475158691406,
+  "e0_minus_other": 0.034760475158691406,
+  "fp32_argmax": 106080
+ },
+ "text-4096-5-62-104739-101884": {
+  "position": 62,
+  "e0_token": 104739,
+  "other_token": 101884,
+  "fp32_gap": 0.0261688232421875,
+  "e0_minus_other": 0.0261688232421875,
+  "fp32_argmax": 104739
+ },
+ "text-256-5-49-16-17": {
+  "position": 49,
+  "e0_token": 16,
+  "other_token": 17,
+  "fp32_gap": 0.10273361206054688,
+  "e0_minus_other": -0.10273361206054688,
+  "fp32_argmax": 17
+ },
+ "text-16-5-1-16-17": {
+  "position": 1,
+  "e0_token": 16,
+  "other_token": 17,
+  "fp32_gap": 0.06882476806640625,
+  "e0_minus_other": -0.06882476806640625,
+  "fp32_argmax": 17
+ },
+ "text-32768-9-2-16-20": {
+  "position": 2,
+  "e0_token": 16,
+  "other_token": 20,
+  "fp32_gap": 0.08028221130371094,
+  "e0_minus_other": 0.08028221130371094,
+  "fp32_argmax": 16
+ },
+ "text-4096-9-40-16-17": {
+  "position": 40,
+  "e0_token": 16,
+  "other_token": 17,
+  "fp32_gap": 0.0001087188720703125,
+  "e0_minus_other": 0.0001087188720703125,
+  "fp32_argmax": 16
+ },
+ "text-256-9-37-18493-33126": {
+  "position": 37,
+  "e0_token": 18493,
+  "other_token": 33126,
+  "fp32_gap": 0.006133079528808594,
+  "e0_minus_other": 0.006133079528808594,
+  "fp32_argmax": 18493
+ },
+ "text-16-9-3-101220-24156": {
+  "position": 3,
+  "e0_token": 101220,
+  "other_token": 24156,
+  "fp32_gap": 0.030740737915039062,
+  "e0_minus_other": -0.030740737915039062,
+  "fp32_argmax": 24156
+ },
+ "random-32768-10-4-220-14731": {
+  "position": 4,
+  "e0_token": 220,
+  "other_token": 14731,
+  "fp32_gap": 0.016152381896972656,
+  "e0_minus_other": -0.016152381896972656,
+  "fp32_argmax": 14731
+ },
+ "random-512-10-101-151644-151645": {
+  "position": 101,
+  "e0_token": 151644,
+  "other_token": 151645,
+  "fp32_gap": 0.009832382202148438,
+  "e0_minus_other": 0.009832382202148438,
+  "fp32_argmax": 151644
+ },
+ "random-512-10-104-151644-151645": {
+  "position": 104,
+  "e0_token": 151644,
+  "other_token": 151645,
+  "fp32_gap": 0.10096549987792969,
+  "e0_minus_other": -0.10096549987792969,
+  "fp32_argmax": 151645
+ },
+ "random-256-10-13-9370-101290": {
+  "position": 13,
+  "e0_token": 9370,
+  "other_token": 101290,
+  "fp32_gap": 0.01898193359375,
+  "e0_minus_other": -0.01898193359375,
+  "fp32_argmax": 101290
+ },
+ "text-4096-13-20-16-18": {
+  "position": 20,
+  "e0_token": 16,
+  "other_token": 18,
+  "fp32_gap": 0.002941131591796875,
+  "e0_minus_other": -0.002941131591796875,
+  "fp32_argmax": 18
+ },
+ "text-4096-13-98-15-17": {
+  "position": 98,
+  "e0_token": 15,
+  "other_token": 17,
+  "fp32_gap": 0.011564254760742188,
+  "e0_minus_other": -0.011564254760742188,
+  "fp32_argmax": 17
+ },
+ "text-512-13-42-43959-57218": {
+  "position": 42,
+  "e0_token": 43959,
+  "other_token": 57218,
+  "fp32_gap": 0.025730133056640625,
+  "e0_minus_other": 0.025730133056640625,
+  "fp32_argmax": 43959
+ },
+ "text-512-13-23-16-15": {
+  "position": 23,
+  "e0_token": 16,
+  "other_token": 15,
+  "fp32_gap": 0.07534217834472656,
+  "e0_minus_other": 0.07534217834472656,
+  "fp32_argmax": 16
+ },
+ "text-1024-13-2-220-7731": {
+  "position": 2,
+  "e0_token": 220,
+  "other_token": 7731,
+  "fp32_gap": 0.015872955322265625,
+  "e0_minus_other": -0.015872955322265625,
+  "fp32_argmax": 7731
+ },
+ "random-512-14-17-15-17": {
+  "position": 17,
+  "e0_token": 15,
+  "other_token": 17,
+  "fp32_gap": 0.05191230773925781,
+  "e0_minus_other": -0.05191230773925781,
+  "fp32_argmax": 17
+ },
+ "random-256-14-19-32100-100278": {
+  "position": 19,
+  "e0_token": 32100,
+  "other_token": 100278,
+  "fp32_gap": 0.07548332214355469,
+  "e0_minus_other": -0.07548332214355469,
+  "fp32_argmax": 100278
+ },
+ "random-256-14-2-46100-87335": {
+  "position": 2,
+  "e0_token": 46100,
+  "other_token": 87335,
+  "fp32_gap": 0.009326934814453125,
+  "e0_minus_other": 0.009326934814453125,
+  "fp32_argmax": 46100
+ },
+ "text-512-17-112-100661-100341": {
+  "position": 112,
+  "e0_token": 100661,
+  "other_token": 100341,
+  "fp32_gap": 0.06677436828613281,
+  "e0_minus_other": 0.06677436828613281,
+  "fp32_argmax": 100661
+ },
+ "text-256-17-4-18137-43589": {
+  "position": 4,
+  "e0_token": 18137,
+  "other_token": 43589,
+  "fp32_gap": 0.0227813720703125,
+  "e0_minus_other": 0.0227813720703125,
+  "fp32_argmax": 18137
+ },
+ "random-512-18-1-220-151645": {
+  "position": 1,
+  "e0_token": 220,
+  "other_token": 151645,
+  "fp32_gap": 0.08005142211914062,
+  "e0_minus_other": -0.08005142211914062,
+  "fp32_argmax": 151645
+ },
+ "random-256-18-9-537-264": {
+  "position": 9,
+  "e0_token": 537,
+  "other_token": 264,
+  "fp32_gap": 0.06437301635742188,
+  "e0_minus_other": 0.06437301635742188,
+  "fp32_argmax": 537
+ },
+ "random-1024-18-1-532-220": {
+  "position": 1,
+  "e0_token": 532,
+  "other_token": 220,
+  "fp32_gap": 0.006815910339355469,
+  "e0_minus_other": 0.006815910339355469,
+  "fp32_argmax": 92
+ },
+ "random-64-18-6-17-86119": {
+  "position": 6,
+  "e0_token": 17,
+  "other_token": 86119,
+  "fp32_gap": 0.055400848388671875,
+  "e0_minus_other": 0.055400848388671875,
+  "fp32_argmax": 17
+ },
+ "random-64-18-2-13874-198": {
+  "position": 2,
+  "e0_token": 13874,
+  "other_token": 198,
+  "fp32_gap": 0.1313629150390625,
+  "e0_minus_other": 0.1313629150390625,
+  "fp32_argmax": 13874
+ },
+ "text-32768-21-13-6345-21103": {
+  "position": 13,
+  "e0_token": 6345,
+  "other_token": 21103,
+  "fp32_gap": 0.14272499084472656,
+  "e0_minus_other": 0.14272499084472656,
+  "fp32_argmax": 6345
+ },
+ "text-4096-21-9-284-366": {
+  "position": 9,
+  "e0_token": 284,
+  "other_token": 366,
+  "fp32_gap": 0.014078140258789062,
+  "e0_minus_other": -0.014078140258789062,
+  "fp32_argmax": 366
+ },
+ "text-512-21-21-284-43504": {
+  "position": 21,
+  "e0_token": 284,
+  "other_token": 43504,
+  "fp32_gap": 0.1412353515625,
+  "e0_minus_other": 0.1412353515625,
+  "fp32_argmax": 284
+ },
+ "text-256-21-1-37847-1991": {
+  "position": 1,
+  "e0_token": 37847,
+  "other_token": 1991,
+  "fp32_gap": 0.10355567932128906,
+  "e0_minus_other": 0.10355567932128906,
+  "fp32_argmax": 37847
+ },
+ "random-256-22-11-100646-100722": {
+  "position": 11,
+  "e0_token": 100646,
+  "other_token": 100722,
+  "fp32_gap": 0.2243175506591797,
+  "e0_minus_other": -0.2243175506591797,
+  "fp32_argmax": 100722
+ }
+}

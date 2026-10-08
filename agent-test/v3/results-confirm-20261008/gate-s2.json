@@ -1,0 +1,31 @@
+{
+ "unit_tests": {
+  "returncode": 0,
+  "tail": "..........................                                               [100%]\n26 passed in 3.70s\n"
+ },
+ "engines": {
+  "E0": {
+   "positions": 1472,
+   "rms_median": 0.04098346829414368,
+   "max_p99": 0.4987754821777344,
+   "margin_err_p99": 0.22410869598388672,
+   "top1_mismatch": 20,
+   "max_fp32_regret": 0.12433624267578125,
+   "sign_test_p_worse": 1.0,
+   "pass": true
+  },
+  "E2": {
+   "positions": 1472,
+   "rms_median": 0.04091276042163372,
+   "max_p99": 0.45920348167419434,
+   "margin_err_p99": 0.20733070373535156,
+   "top1_mismatch": 15,
+   "max_fp32_regret": 0.13405895233154297,
+   "sign_test_p_worse": 0.940765380859375,
+   "pass": true
+  }
+ },
+ "interpretation": "empirical_numerical_screen_not_quality_noninferiority",
+ "e0_margin_err_p99": 0.22410869598388672,
+ "all_pass": true
+}

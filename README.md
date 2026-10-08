@@ -24,11 +24,28 @@ retained. DRAM traffic credits the modeled initial on-chip input capacity.
 Historical full-graph/cold values and hypothetical rate sensitivities are in
 [review_corrections.json](results/figures/review_corrections.json).
 
-The v3 simple experiment observes TTFT ratios of 1.682 / 1.591 / 1.250 at
-16 / 64 / 256 tokens. Its 32k TTFT and decode results remain undecided.
-[Corrected analysis](agent-test/v3/results-simple/report-corrected.md) is
-explicitly post-collection and preserves the original registered analysis.
-Small-sample intervals, consecutive sessions and thermal effects limit inference.
+**Engine comparison (prospective, pre-registered "confirm" run, 2026-10-07/08).**
+648 process-isolated, thermally gated timings, no exclusions; 24 pairs per
+scenario over two sessions; plan frozen in
+[CONFIRM.md](agent-test/v3/CONFIRM.md) before collection.
+The agent-built engine (agent-test/v2) vs stock mlx-lm `generate_step`
+(time ratio E0/E2, geometric mean; verdict from a one-sided sign test on the
+paired median > 1.02, Holm-corrected):
+
+| Scenario | mlx-lm / v2 | Verdict |
+|---|---|---|
+| TTFT, prompt 16 / 64 / 256 / 1024 | 1.81 / 1.53 / 1.30 / 1.11 | faster |
+| TTFT, prompt 32k | 1.05 | faster |
+| Decode, context 512 | 1.075 | faster |
+| Request 256 + 256 tokens | 1.087 | faster |
+| Decode, context 32k | 1.020 | undecided |
+| TTFT 4k, decode 4k, request 4096 + 128 | 1.05–1.06 | void (pre-registered divergence rule) |
+
+Official vLLM 0.30 + vllm-metal (descriptive only) was slower than both in
+every scenario on this machine. Full results:
+[report](agent-test/v3/results-confirm-20261008/report-corrected.md).
+Both sessions ran the same night; the split between scheduling and kernel
+gains is not measured.
 KV quality experiments have no measured compressed/sparse decode speed yet.
 
 ## Approach

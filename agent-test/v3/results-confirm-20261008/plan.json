@@ -1,0 +1,31 @@
+{
+ "profile": "confirm",
+ "pairs": {
+  "ttft16": 24,
+  "ttft64": 24,
+  "ttft256": 24,
+  "ttft1024": 24,
+  "ctx512": 24,
+  "ctx4096": 24,
+  "ctx32768": 24,
+  "req256x256": 24,
+  "req4096x128": 24
+ },
+ "regimes": [
+  "idle"
+ ],
+ "gate": "unit",
+ "ablation_blocks": 0,
+ "carryover_blocks": 0,
+ "engines": [
+  "E0",
+  "E2",
+  "V0"
+ ],
+ "gate_engines": [
+  "E0",
+  "E2"
+ ],
+ "analysis": "prospective_sign_median_v2",
+ "comparator": "official vLLM + vllm-metal"
+}
