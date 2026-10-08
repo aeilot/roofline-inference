@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Navigation pilot: four sequential Codex runs (P1, B1, B2, P2), 2 h each, then the blinded evaluation.
+# Navigation pilot: four sequential Codex runs (P1, B1, B2, P2), 2 h each, then the blinded evaluation (PILOT.md).
 # Pause between runs: touch ~/nav-runs/PAUSE (remove to continue). No run starts after LAST_START.
 # Resumable: a run with an existing runs/<id>/run.json is skipped.
 set -uo pipefail
@@ -8,7 +8,7 @@ cd "$ROOT"
 caffeinate -dimsu -w $$ &
 LOG=agent-test/nav/runs/pilot.log
 HOURS=${HOURS:-2}
-LAST_START=${LAST_START:-0230}     # HHMM next morning; later runs are skipped so the evaluation fits
+LAST_START=${LAST_START:-0200}     # HHMM next morning; later runs are skipped so the evaluation fits
 mkdir -p agent-test/nav/runs
 say_log() { print -r -- "[$(date '+%m-%d %H:%M:%S')] $*" | tee -a "$LOG"; }
 for spec in P:P1 B:B1 B:B2 P:P2; do

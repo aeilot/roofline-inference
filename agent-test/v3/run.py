@@ -78,7 +78,7 @@ if _NAV:
         regimes=["idle"], gate="group", ablation_blocks=0, carryover_blocks=0,
         engines=["E0"] + sorted(_NAV), gate_engines=["E0"] + sorted(_NAV), analysis="nav_pilot")
     for _d in _NAV.values():
-        FROZEN += sorted(Path(_d).rglob("*.py"))
+        FROZEN += sorted(f for f in Path(_d).rglob("*") if f.is_file() and "__pycache__" not in f.parts)
 
 
 def session_of(block):
@@ -358,12 +358,13 @@ def main():
         log(out, "judging generated-sequence divergences against FP32")
         subprocess.run([PY, str(HERE / "divergence.py"), "--results", str(out)], check=True)
         log(out, "analysis")
-        subprocess.run([PY, str(HERE / "analyze.py"), "--results", str(out)], check=True)
-        if args.profile == "nav":
+        if args.profile == "nav":     # no E2 here: analyze.py's E2-vs-E0 sections would be empty
             subprocess.run([PY, str(HERE.parent / "nav" / "nav_analyze.py"), "--results", str(out)], check=True)
+        else:
+            subprocess.run([PY, str(HERE / "analyze.py"), "--results", str(out)], check=True)
         manifest["finished"] = datetime.now().isoformat()
         mf.write_text(json.dumps(manifest, indent=1))
-        log(out, f"session {session} done -> {out / 'report-corrected.md'}")
+        log(out, f"session {session} done -> {out / ('nav_report.md' if args.profile == 'nav' else 'report-corrected.md')}")
     finally:
         caffeinate.terminate()
 

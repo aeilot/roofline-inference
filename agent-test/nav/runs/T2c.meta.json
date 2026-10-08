@@ -1,0 +1,8 @@
+{
+ "arm": "P",
+ "run": "T2c",
+ "hours": 1.0,
+ "start": "2026-10-08T16:04:02.434692",
+ "deadline": "2026-10-08T17:04:02.434692",
+ "workspace": "/Users/aeilot/nav-runs/T2c"
+}

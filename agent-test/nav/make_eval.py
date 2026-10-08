@@ -1,12 +1,16 @@
 """Blind the pilot's final engines for evaluation.
 
-Writes runs/candidates.json ({blinded name: engine dir}, read by the v3 harness via NAV_CANDIDATES)
+Copies each final engine to runs/blinded/C-<n>/ (so no path the harness logs names the run),
+writes runs/candidates.json ({blinded name: engine dir}, read by the v3 harness via NAV_CANDIDATES)
 and runs/blind_key.json ({blinded name: run id}, read only by nav_analyze.py after timing).
+The evaluation is automatic and pre-registered, so blinding mainly keeps run identities out of logs
+and reports read while it is running.
 
     python agent-test/nav/make_eval.py P1 B1 B2 P2
 """
 import json
 import random
+import shutil
 import sys
 from pathlib import Path
 
@@ -18,7 +22,10 @@ if missing:
 order = runs[:]
 random.Random(20261008).shuffle(order)
 names = {f"C-{i + 1}": r for i, r in enumerate(order)}
-(HERE / "runs" / "candidates.json").write_text(json.dumps(
-    {n: str(HERE / "runs" / r / "engine") for n, r in names.items()}, indent=1))
+blind = HERE / "runs" / "blinded"
+shutil.rmtree(blind, ignore_errors=True)
+for n, r in names.items():
+    shutil.copytree(HERE / "runs" / r / "engine", blind / n, ignore=shutil.ignore_patterns("__pycache__"))
+(HERE / "runs" / "candidates.json").write_text(json.dumps({n: str(blind / n) for n in names}, indent=1))
 (HERE / "runs" / "blind_key.json").write_text(json.dumps(names, indent=1))
 print("candidates:", ", ".join(names))

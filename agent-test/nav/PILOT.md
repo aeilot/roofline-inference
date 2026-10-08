@@ -63,3 +63,44 @@ analysis and Apple GPU tricks. Results are descriptive and are used to size a fu
 - The sandbox now also denies reading `~/nav-runs` except the run's own workspace and CODEX_HOME:
   previously a later run could have read earlier runs' workspaces. Self-test T1 confirmed the
   denial, GPU access, blocked repo / ~/.claude / ~/.codex / github.com, and the rollout capture.
+
+## Revision 3 (2026-10-08, before any complete run): review fixes
+
+Primary metric (replaces "geometric mean over scenarios" above and the 10-metric version in the
+first nav_analyze.py): scenario score = geometric mean of the paired median ratios t_E0 / t_engine
+of the scenario's metrics (TTFT for ttft16/64/256/1024; TTFT and decode for ctx512/4096/32768; whole
+request for req256x256); primary = geometric mean of the 8 scenario scores. TASK.md now states this
+rule (ctx512 TTFT was named in TASK.md but missing from the metric list).
+- A scenario voided by the signed divergence rule scores 1.0 (no speed-up), so every candidate is
+  scored on the same 8 scenarios; previously the primary used whatever subset survived (v2 itself
+  would lose ctx4096 on noise: 0.240 vs threshold 0.224). Sensitivity: valid scenarios only.
+- Correctness the agent can see now matches the evaluation: `tools/check.py` adds the gate's rule
+  that every top-1 disagreement must be within mlx-lm's p99 margin noise, and a long-prompt part
+  (3000 and 9000 tokens through `generate`, chunked prefill) applying the evaluation's signed
+  divergence rule. The starting engine passes (largest regret 0.185 < noise 0.336; long prompts identical), and so does the v2 engine through an API wrapper (0.184; identical), in ~2 min.
+- TASK.md: the engine must be self-contained in `engine/` and committed (only `engine/` of the last
+  commit is evaluated); no files written at run time, no state between processes.
+- Isolation is an allowlist: nothing under the home directory is readable except the run's
+  workspace, its box (own HOME, CODEX_HOME, TMPDIR), the Python environment and the model cache;
+  /tmp and the user's temp dir are closed (git runs as the real binary, not the xcrun shim that caches there). The denylist had left
+  ~/.claude.json, the Claude and Codex app data (15 and 1 files mentioning this project) and shared
+  /tmp, ~/.cache readable. Self-test T2 confirmed all denials, GPU access, git and the private TMPDIR.
+- Machine log every 60 s during agent runs (AC, lid, thermal state, load, HID idle time); run.json
+  and the report give minutes on battery / lid closed / user active / thermal not nominal per run.
+  `bench.py` waits for AC without limit while the agent's clock runs, so such minutes are unequal
+  budget between runs; they are reported, not corrected.
+- Before timing: blinded copies (runs/blinded/C-n, paths no longer name the run), static audit of
+  file / process / network / serialization calls (nav_audit.py, manual review); after timing: any
+  metric faster than 0.9x its resource reference line is flagged for review. Freezing covers every
+  file in a candidate's engine/, not only .py; candidate subpackages cannot resolve to v2 modules.
+- Schedule: estimated 2 h 12 min per agent run and ~3 h 25 min for the evaluation (320 units,
+  from the confirm run's unit times), ~12 h 15 min in total. LAST_START moves to 02:00 so the
+  evaluation of a run started then ends before NAV_STOP_AT 08:15 with ~1 h of margin.
+
+Interpretation additions: arm P also has HARDWARE.md (calibrated rates), so the manipulation is
+"pre-computed reference lines and gap decomposition", not "knowledge of the hardware". The aborted
+P1 already found v2-like optimizations unaided, so a ceiling effect is plausible; with two runs per
+arm the pilot sizes variance and cannot detect it. Usage numbers are approximate (requests counted
+as token_count events; tool time can be low when long commands are polled; model time includes
+streaming and network). Blinding keeps run identities out of logs; the evaluation is automatic and
+pre-registered, so it is not a safeguard against analyst choices.

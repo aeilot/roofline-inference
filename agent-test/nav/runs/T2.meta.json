@@ -1,0 +1,8 @@
+{
+ "arm": "B",
+ "run": "T2",
+ "hours": 0.1,
+ "start": "2026-10-08T16:02:46.039923",
+ "deadline": "2026-10-08T16:08:46.039923",
+ "workspace": "/Users/aeilot/nav-runs/T2"
+}

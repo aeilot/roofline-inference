@@ -1,0 +1,20 @@
+{
+ "arm": "P",
+ "run": "T2c",
+ "workspace": "/Users/aeilot/nav-runs/T2c",
+ "started": 1791493445.2690072,
+ "ended": 1791493575.391295,
+ "hours": 1.0,
+ "hard_stopped": false,
+ "exit_code": 0,
+ "model": "gpt-6.1-sol",
+ "effort": "medium",
+ "test": true,
+ "machine": {
+  "samples": 3,
+  "minutes_not_on_ac": 3,
+  "minutes_lid_closed": 0,
+  "minutes_thermal_not_nominal": 0,
+  "minutes_user_active": 1
+ }
+}

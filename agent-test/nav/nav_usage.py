@@ -7,6 +7,10 @@ Per run (runs/<id>/rollout.jsonl):
   tool calls  number of tool calls and their summed wall time (call -> matching output, by call_id)
   model time  wall time not spent inside tool calls (model thinking + streaming + overhead)
   reasoning   number of reasoning-summary items
+  machine     minutes on battery / lid closed / user active / thermal not nominal (run.json, from
+              run_agent.py's machine log)
+Caveats: requests = token_count events (approximate); tool time can be low when a long command is
+polled in pieces; model time includes generation, streaming and network, not only thinking.
 Writes runs/usage.json and prints a table.
 
     python agent-test/nav/nav_usage.py [P1 B1 ...]
@@ -57,7 +61,9 @@ def usage(run: str) -> dict | None:
             elif kind.endswith("_call_output") and p.get("call_id") in calls:
                 tool_time += t - calls.pop(p["call_id"])
     wall = (last - first) if first is not None else 0.0
-    return dict(run=run, wall_s=wall, requests=n_req, tool_calls=n_calls, tool_time_s=tool_time,
+    rj = HERE / "runs" / run / "run.json"
+    machine = json.loads(rj.read_text()).get("machine") if rj.exists() else None
+    return dict(run=run, machine=machine, wall_s=wall, requests=n_req, tool_calls=n_calls, tool_time_s=tool_time,
                 model_time_s=wall - tool_time, reasoning_summaries=n_reason,
                 input_tokens=total.get("input_tokens", 0), cached_input_tokens=total.get("cached_input_tokens", 0),
                 output_tokens=total.get("output_tokens", 0),

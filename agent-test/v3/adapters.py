@@ -221,8 +221,10 @@ class Candidate:
         import importlib
         path = Path(path)
         # The candidate's own modules must win over agent-test/v2's (same names, e.g. engine, kernels).
-        for stem in [p.stem for p in path.glob("*.py")] + ["engine"]:
-            sys.modules.pop(stem, None)
+        # Packages too: a candidate's kernels/ directory must not resolve to v2's kernels module.
+        names = {p.stem for p in path.glob("*.py")} | {p.name for p in path.iterdir() if p.is_dir()} | {"engine"}
+        for m in [m for m in sys.modules if m.split(".")[0] in names]:
+            sys.modules.pop(m, None)
         sys.path.insert(0, str(path))
         self.engine = importlib.import_module("engine").Engine(model)
         self.stream = self.engine.stream

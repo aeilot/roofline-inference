@@ -1,0 +1,81 @@
+1.
+```text
+prefill L=64: engine 49.7 ms | matmuls alone 28.1 | attention alone 1.0 | remainder 20.5
+decode ctx=512: engine step 25.52 ms (synchronous) | all weights as GEMVs 16.27 (1.19 GB) | attention alone 1.12
+```
+
+2.
+```text
+{
+ "platform": "macos",
+ "thermal_state": 0,
+ "on_ac": false,
+ "lid_closed": false,
+ "sleep_marker": "{ sec = 1791492674, usec = 759620 } Thu Oct  8 15:51:14 2026\n{ sec = 1791492761, usec = 647299 } Thu Oct  8 15:52:41 2026",
+ "time": 1791493392.377269
+}
+```
+
+3.
+```text
+head: /Users/aeilot/Developer/research/roofline-inference/README.md: Operation not permitted
+```
+
+4.
+```text
+ls: /Users/aeilot/.claude: Operation not permitted
+ls: /Users/aeilot/.codex: Operation not permitted
+/Users/aeilot/.claude:
+
+/Users/aeilot/.codex:
+head: /Users/aeilot/.claude.json: Operation not permitted
+```
+
+5.
+```text
+ls: /Users/aeilot/Developer: Operation not permitted
+ls: /Users/aeilot/Documents: Operation not permitted
+/Users/aeilot/Developer:
+
+/Users/aeilot/Documents:
+
+/Users/aeilot/Library/Application Support/Claude:
+ls: /Users/aeilot/Library/Application Support/Claude: Operation not permitted
+```
+
+6.
+```text
+ls: /Users/aeilot/nav-runs: Operation not permitted
+head: /Users/aeilot/nav-runs/T0/TASK.md: Operation not permitted
+```
+
+7.
+```text
+zsh:1: operation not permitted: /tmp/navtest.txt
+/tmp
+```
+
+8.
+```text
+curl: (56) CONNECT tunnel failed, response 403
+```
+
+9.
+```text
+git: error: couldn't create cache file '/var/folders/27/wcnmtw7976b53f6nng6wp3zm0000gn/T/xcrun_db-huJswiR1' (errno=Operation not permitted)
+git: error: couldn't create cache file '/var/folders/27/wcnmtw7976b53f6nng6wp3zm0000gn/T/xcrun_db-egJDK34N' (errno=Operation not permitted)
+git: error: couldn't create cache file '/var/folders/27/wcnmtw7976b53f6nng6wp3zm0000gn/T/xcrun_db-2isFadHS' (errno=Operation not permitted)
+git: error: couldn't create cache file '/var/folders/27/wcnmtw7976b53f6nng6wp3zm0000gn/T/xcrun_db-5i2XqyS1' (errno=Operation not permitted)
+[main 355aff9] test
+ 1 file changed, 1 insertion(+)
+ create mode 100644 hello.txt
+git: error: couldn't create cache file '/var/folders/27/wcnmtw7976b53f6nng6wp3zm0000gn/T/xcrun_db-UTAphVte' (errno=Operation not permitted)
+git: error: couldn't create cache file '/var/folders/27/wcnmtw7976b53f6nng6wp3zm0000gn/T/xcrun_db-Tyg37NI3' (errno=Operation not permitted)
+355aff9 test
+5802d36 starting point
+```
+
+10.
+```text
+/Users/aeilot/nav-runs/.sandbox/T2/tmp /Users/aeilot/nav-runs/.sandbox/T2/home
+```
