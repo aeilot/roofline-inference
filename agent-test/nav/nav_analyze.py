@@ -91,6 +91,16 @@ def main():
             gm = math.exp(statistics.fmean(math.log(p) for p in ps))
             lines.append(f"| {arm} | {len(ps)} | {', '.join(f'{p:.3f}' for p in ps)} | {gm:.3f} |")
         summary["_arms"] = {k: v for k, v in arms.items()}
+    usage_f = HERE / "runs" / "usage.json"
+    if usage_f.exists():
+        lines += ["## Agent 用量（来自 Codex 会话记录）", "",
+                  "| 运行 | 时长 h | 模型请求 | 工具调用 | 工具时间占比 | 输入 token（缓存） | 输出 token | 思考 token |",
+                  "|---|---|---|---|---|---|---|---|"]
+        for u in json.loads(usage_f.read_text()):
+            lines.append(f"| {u['run']} | {u['wall_s'] / 3600:.2f} | {u['requests']} | {u['tool_calls']} | "
+                         f"{u['tool_time_s'] / max(u['wall_s'], 1):.0%} | {u['input_tokens']:,} ({u['cached_input_tokens']:,}) | "
+                         f"{u['output_tokens']:,} | {u['reasoning_output_tokens']:,} |")
+        lines.append("")
     (res / "nav_report.md").write_text("\n".join(lines))
     (res / "nav_summary.json").write_text(json.dumps(summary, indent=1))
     print("\n".join(lines))

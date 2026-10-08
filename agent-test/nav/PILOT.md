@@ -52,3 +52,14 @@ analysis and Apple GPU tricks. Results are descriptive and are used to size a fu
   measurement disturbed by power loss or sleep (previously it waited at most 5 minutes and then
   timed on battery). Both arms get the same tool.
 - The evaluation covers every completed run, blinded (make_eval.py), 8 pairs per scenario.
+
+## Revision 2 (2026-10-08, before any complete run): agent usage records
+
+- Each run gets its own fresh CODEX_HOME and keeps Codex's session rollout (previously `--ephemeral`
+  discarded it): timestamped model requests with cumulative input / cached / output / reasoning
+  tokens, tool calls and reasoning summaries (`model_reasoning_summary = "auto"`, both arms).
+  `nav_usage.py` reports tokens, requests, tool calls and the wall-time split (tool vs model) per run;
+  these are additional descriptive outcomes (cost of each arm), not decision criteria.
+- The sandbox now also denies reading `~/nav-runs` except the run's own workspace and CODEX_HOME:
+  previously a later run could have read earlier runs' workspaces. Self-test T1 confirmed the
+  denial, GPU access, blocked repo / ~/.claude / ~/.codex / github.com, and the rollout capture.

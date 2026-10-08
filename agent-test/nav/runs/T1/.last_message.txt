@@ -1,0 +1,37 @@
+1.
+```text
+prefill L=64: engine 29.1 ms | matmuls alone 20.7 | attention alone 0.7 | remainder 7.7
+decode ctx=512: engine step 16.94 ms (synchronous) | all weights as GEMVs 13.37 (1.19 GB) | attention alone 0.65
+```
+
+2.
+```text
+head: /Users/aeilot/Developer/research/roofline-inference/README.md: Operation not permitted
+```
+
+3.
+```text
+ls: /Users/aeilot/.claude: Operation not permitted
+ls: /Users/aeilot/.codex: Operation not permitted
+```
+
+4.
+```text
+curl: (56) CONNECT tunnel failed, response 403
+```
+
+5.
+```text
+[main a4da804] test
+ 1 file changed, 1 insertion(+)
+ create mode 100644 hello.txt
+a4da804 test
+b6fe718 starting point
+```
+
+6.
+```text
+ls: /Users/aeilot/nav-runs: Operation not permitted
+head: /Users/aeilot/nav-runs/T0/TASK.md: Operation not permitted
+ls: /Users/aeilot/nav-runs/.codex-homes: Operation not permitted
+```

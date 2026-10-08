@@ -1,0 +1,12 @@
+{
+ "arm": "B",
+ "run": "T1",
+ "workspace": "/Users/aeilot/nav-runs/T1",
+ "started": 1791489984.794892,
+ "ended": 1791490024.88214,
+ "hours": 0.1,
+ "hard_stopped": false,
+ "exit_code": 0,
+ "model": "gpt-6.1-sol",
+ "effort": "medium"
+}

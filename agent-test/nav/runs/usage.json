@@ -1,0 +1,16 @@
+[
+ {
+  "run": "T1",
+  "wall_s": 28.039000034332275,
+  "requests": 3,
+  "tool_calls": 2,
+  "tool_time_s": 3.4819998741149902,
+  "model_time_s": 24.557000160217285,
+  "reasoning_summaries": 0,
+  "input_tokens": 44354,
+  "cached_input_tokens": 41088,
+  "output_tokens": 556,
+  "reasoning_output_tokens": 0,
+  "total_tokens": 44910
+ }
+]

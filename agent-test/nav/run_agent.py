@@ -2,8 +2,9 @@
 
 Isolation (why each part exists):
 - Workspace outside this repo (make_workspace.py): the agent sees only its arm's materials.
-- Fresh CODEX_HOME holding only auth.json and a minimal config: no memories, skills, plugins,
-  MCP servers or past sessions (~/.codex/sessions contains transcripts about this project).
+- A fresh CODEX_HOME per run holding only auth.json and a minimal config: no memories, skills,
+  plugins, MCP servers or past sessions (~/.codex/sessions contains transcripts about this project).
+  Its session rollout is kept: per-request token usage (incl. reasoning tokens) with timestamps.
 - macOS sandbox profile (sandbox-exec): no reads of this repo (except the shared Python env),
   ~/.claude or ~/.codex; writes only to the workspace, the fresh CODEX_HOME, caches and temp;
   no network except the local allowlist proxy, which only tunnels to OpenAI hosts.
@@ -31,7 +32,7 @@ ROOT = HERE.parents[1]
 PY = ROOT / ".venv-vllm-metal/bin/python"
 HOME = Path.home()
 NAV = HOME / "nav-runs"
-CODEX_HOME = NAV / ".codex-home"
+CODEX_HOMES = NAV / ".codex-homes"
 PORT = 18080
 MODEL, EFFORT = "gpt-6.1-sol", "medium"
 
@@ -44,12 +45,14 @@ TEST_PROMPT = f"""This is an environment self-test. Run each command below in or
 3. ls ~/.codex ~/.claude
 4. curl -sS -m 5 https://github.com | head -c 80
 5. echo hello > hello.txt && git add hello.txt && git commit -m test && git log --oneline | head -2
+6. ls ~/nav-runs; head -3 ~/nav-runs/T0/TASK.md; ls ~/nav-runs/.codex-homes
 """
 
 
-def profile(ws: Path) -> str:
-    deny_read = [ROOT, HOME / ".claude", HOME / ".codex"]
-    writable = [ws, CODEX_HOME, HOME / ".cache", HOME / "Library/Caches", Path("/private/tmp"),
+def profile(ws: Path, home: Path) -> str:
+    # NAV is denied too: other runs' workspaces and session rollouts must stay invisible.
+    deny_read = [ROOT, HOME / ".claude", HOME / ".codex", NAV]
+    writable = [ws, home, HOME / ".cache", HOME / "Library/Caches", Path("/private/tmp"),
                 Path("/private/var/folders")]
     q = lambda p: f'(subpath "{p}")'  # noqa: E731
     return "\n".join([
@@ -59,19 +62,24 @@ def profile(ws: Path) -> str:
         f'(allow network-outbound (remote tcp "localhost:{PORT}"))',
         "(allow network* (local unix))",
         f"(deny file-read* {' '.join(q(p) for p in deny_read)})",
-        f"(allow file-read-metadata {q(ROOT)})",
+        f"(allow file-read-metadata {q(ROOT)} {q(NAV)})",
+        f"(allow file-read* {q(ws)} {q(home)})",
         f"(allow file-read* {q(ROOT / '.venv-vllm-metal')})",
         f"(deny file-write* {q(HOME)})",
         f"(allow file-write* {' '.join(q(p) for p in writable)})",
     ])
 
 
-def ensure_codex_home():
-    CODEX_HOME.mkdir(parents=True, exist_ok=True)
-    if not (CODEX_HOME / "auth.json").exists():
-        shutil.copy(HOME / ".codex/auth.json", CODEX_HOME / "auth.json")
-        os.chmod(CODEX_HOME / "auth.json", 0o600)
-    (CODEX_HOME / "config.toml").write_text(f'model = "{MODEL}"\nmodel_reasoning_effort = "{EFFORT}"\n')
+def make_codex_home(run: str) -> Path:
+    home = CODEX_HOMES / run
+    if home.exists():
+        shutil.rmtree(home)
+    home.mkdir(parents=True)
+    shutil.copy(HOME / ".codex/auth.json", home / "auth.json")
+    os.chmod(home / "auth.json", 0o600)
+    (home / "config.toml").write_text(f'model = "{MODEL}"\nmodel_reasoning_effort = "{EFFORT}"\n'
+                                      'model_reasoning_summary = "auto"\n')
+    return home
 
 
 def ensure_proxy(log: Path):
@@ -92,19 +100,20 @@ def main():
     a = ap.parse_args()
     out = HERE / "runs" / a.run
     out.mkdir(parents=True, exist_ok=True)
-    ensure_codex_home()
+    home = make_codex_home(a.run)
     ensure_proxy(HERE / "runs" / "proxy.log")
     hours = 0.1 if a.test else a.hours
     ws = Path(subprocess.check_output([sys.executable, str(HERE / "make_workspace.py"), "--arm", a.arm,
                                        "--run", a.run, "--hours", str(hours)], text=True).strip())
     sb = out / "sandbox.sb"
-    sb.write_text(profile(ws))
+    sb.write_text(profile(ws, home))
     env = {k: v for k, v in os.environ.items() if not k.startswith(("CLAUDE", "ANTHROPIC", "OPENAI"))}
-    env.update(CODEX_HOME=str(CODEX_HOME), HF_HUB_OFFLINE="1",
+    env.update(CODEX_HOME=str(home), HF_HUB_OFFLINE="1",
                HTTPS_PROXY=f"http://127.0.0.1:{PORT}", HTTP_PROXY=f"http://127.0.0.1:{PORT}",
                ALL_PROXY=f"http://127.0.0.1:{PORT}", NO_PROXY="localhost,127.0.0.1")
     cmd = ["sandbox-exec", "-f", str(sb), "codex", "exec", "--dangerously-bypass-approvals-and-sandbox",
-           "--ephemeral", "--skip-git-repo-check", "-m", MODEL, "-c", f'model_reasoning_effort="{EFFORT}"',
+           "--skip-git-repo-check", "-m", MODEL, "-c", f'model_reasoning_effort="{EFFORT}"',
+           "-c", 'model_reasoning_summary="auto"',
            "-C", str(ws), "--json", "-o", str(ws / ".last_message.txt"),   # the sandbox cannot write to this repo
            TEST_PROMPT if a.test else PROMPT]
     t0 = time.time()
@@ -126,6 +135,9 @@ def main():
     snap.mkdir()
     tar = subprocess.run(["git", "archive", "HEAD", "engine"], cwd=ws, capture_output=True, check=True).stdout
     subprocess.run(["tar", "-x", "--strip-components", "1", "-C", str(snap)], input=tar, check=True)
+    # session rollout: timestamped model requests with token usage, tool calls and reasoning summaries
+    for i, f in enumerate(sorted((home / "sessions").rglob("*.jsonl"))):
+        shutil.copy(f, out / f"rollout{'' if i == 0 else i}.jsonl")
     for f in ("NOTES.md", ".last_message.txt"):
         if (ws / f).exists():
             shutil.copy(ws / f, out / f)
