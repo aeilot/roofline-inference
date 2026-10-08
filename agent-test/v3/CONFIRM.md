@@ -55,7 +55,7 @@ HF_HUB_OFFLINE=1 VLLM_ENABLE_V1_MULTIPROCESSING=0 \
   --out agent-test/v3/results-smoke-confirm
 ```
 
-已设定 launchd 定时任务（`~/Library/LaunchAgents/com.roofline.v3-run.plist`）：2026-10-08 01:00 运行下面"同夜两个时段"的命令（`GAP_HOURS=2`），只运行一次；日志 `~/Library/Logs/roofline-v3-run.log`。
+实际启动：2026-10-07 晚上由 launchd 一次性任务（加载即运行，`~/Library/LaunchAgents/com.roofline.v3-now.plist`）立即运行下面"同夜两个时段"的命令（`GAP_HOURS=2`），原定的 01:00 定时任务已撤销；日志 `~/Library/Logs/roofline-v3-run.log`。开始时间不是科学控制变量。
 手动运行第一时段的等价命令：
 
 ```sh
