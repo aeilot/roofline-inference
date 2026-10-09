@@ -48,6 +48,25 @@ Both sessions ran the same night; the split between scheduling and kernel
 gains is not measured.
 KV quality experiments have no measured compressed/sparse decode speed yet.
 
+**Navigation pilot (2026-10-08/09): do the reference lines help an optimizing
+agent?** Two arms, two Codex runs each (2 h, sandboxed, same starting engine
+and tools); arm B also got the per-scenario reference lines and the mlx-lm gap
+decomposition. Final engines were evaluated blinded in the v3 harness against
+mlx-lm (geometric mean of 8 scenario scores; a voided scenario scores 1.0):
+
+| Arm | Runs | Primary |
+|---|---|---|
+| B (profiling + reference lines) | B1, B2 | 1.137, 1.224 (mean 1.180) |
+| P (profiling only) | P1, P2 | 1.116, 1.090 (mean 1.103) |
+
+Both B runs beat both P runs, mainly on short-prompt TTFT and 32k prefill
+(both B runs made a small-M GEMM work); decode gained 0–3% in every run, in
+line with its small reference-line headroom. Token cost was similar across
+arms. With 2 vs 2 the exact permutation p is about 0.17: descriptive only,
+used to size a full experiment (6–10 runs per arm). Design and results:
+[PILOT.md](agent-test/nav/PILOT.md),
+[nav_report.md](agent-test/v3/results-nav-pilot/nav_report.md).
+
 ## Approach
 
 - **Inputs:** a model spec (layers, hidden size, heads, KV heads, FFN size,
@@ -100,7 +119,8 @@ Quantization, speculative decoding, batching, multi-engine allocation
 ├── benchmarks/        # MLX / Metal micro-benchmarks, engine baselines and ablation
 ├── scripts/           # Fits, calibration export, GGUF converter, figures
 ├── tests/             # Unit tests (incl. an exact red-blue pebbling solver)
-├── docs/              # Design notes and derivations
+├── docs/              # Report, design notes, navigation experiment design
+├── agent-test/        # Agent-built engines (v2), v3 benchmark harness, navigation pilot (nav/)
 ├── data/              # Input data, converted models (git-ignored)
 └── results/
     ├── raw/           # Raw measurements (git-ignored)
@@ -155,6 +175,13 @@ python benchmarks/kv_quality.py && python scripts/plot_kv_quality.py # KV policy
 
 llama.cpp needs a GGUF; `scripts/convert_qwen3_gguf.py` converts the HF
 safetensors to BF16 GGUF without PyTorch, then `llama-bench` runs it.
+
+## Porting to another device or model
+
+The calibration -> reference lines -> baselines and gap -> engine optimization
+-> pre-registered verification workflow is packaged as a Claude Code skill in
+[.claude/skills/roofline-engine-study](.claude/skills/roofline-engine-study/SKILL.md),
+with per-stage references and a pre-registration template.
 
 ## Background
 
