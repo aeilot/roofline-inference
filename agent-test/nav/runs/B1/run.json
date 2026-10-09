@@ -1,0 +1,20 @@
+{
+ "arm": "B",
+ "run": "B1",
+ "workspace": "/Users/aeilot/nav-runs/B1",
+ "started": 1791505269.038561,
+ "ended": 1791512414.13659,
+ "hours": 2.0,
+ "hard_stopped": false,
+ "exit_code": 0,
+ "model": "gpt-6.1-sol",
+ "effort": "medium",
+ "test": false,
+ "machine": {
+  "samples": 119,
+  "minutes_not_on_ac": 0,
+  "minutes_lid_closed": 0,
+  "minutes_thermal_not_nominal": 21,
+  "minutes_user_active": 20
+ }
+}

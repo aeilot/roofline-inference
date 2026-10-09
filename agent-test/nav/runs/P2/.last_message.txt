@@ -1,0 +1,7 @@
+Completed and committed as `7a5f57b`; working tree is clean.
+
+- Measured overall speed-up: **1.133×** across all eight scenarios.
+- `tools/check.py`: **PASS**.
+- Three additional 32K prompts matched all **387 generated tokens**.
+
+Changes, measurements, headroom estimates, and time allocation are recorded in [NOTES.md](/Users/aeilot/nav-runs/P2/NOTES.md).

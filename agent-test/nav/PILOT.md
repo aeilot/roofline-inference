@@ -104,3 +104,69 @@ arm the pilot sizes variance and cannot detect it. Usage numbers are approximate
 as token_count events; tool time can be low when long commands are polled; model time includes
 streaming and network). Blinding keeps run identities out of logs; the evaluation is automatic and
 pre-registered, so it is not a safeguard against analyst choices.
+
+## Deviation log (during the run of 2026-10-08)
+
+- 21:20: B1 ended with the operator's Codex 5-hour quota at 15% (P1 + B1 used ~85%). B2 was held with
+  `~/nav-runs/PAUSE` until the quota reset at 22:50 (a ~1.5 h gap, no agent running). P2 follows B2
+  in the same quota window by the operator's choice; whether any run hit a usage limit is checked
+  in its transcript and reported with the results.
+- 21:42: the operator switched Codex to another account (plan "prolite", weekly window only, 12% used),
+  so B2 and P2 run on it and the hold ended at ~21:45 instead of 22:50. Same CLI, model
+  (gpt-6.1-sol) and reasoning effort; each run copies the current auth.json when it starts.
+  P1 and B1 ran on the first account, B2 and P2 on the second: one run per arm on each account.
+
+## Results (2026-10-08/09)
+
+All four runs completed: P1 17:48–19:16 (1.46 h, stopped itself), B1 19:21–21:20 (1.98 h), B2
+21:45–23:19 (1.57 h), P2 23:24–01:22 (1.96 h). Evaluation 01:37–03:38 (after a 10-min cooldown), two sessions of 160 units,
+no excluded units; every candidate passed the FP32 gate in both sessions. Report:
+`agent-test/v3/results-nav-pilot/nav_report.md`; blinding key `runs/blind_key.json`
+(C-1 = P2, C-2 = B1, C-3 = P1, C-4 = B2).
+
+| Run | Arm | Primary | Valid-only | Void scenario |
+|---|---|---|---|---|
+| B2 | B | 1.224 | 1.224 | — |
+| B1 | B | 1.137 | 1.158 | ctx512 |
+| P1 | P | 1.116 | 1.116 | — |
+| P2 | P | 1.090 | 1.104 | ctx512 |
+| Arm B (geometric mean) | | 1.180 | 1.191 | |
+| Arm P (geometric mean) | | 1.103 | 1.110 | |
+
+- Direction: both B runs scored above both P runs (difference ~7%). With 2 vs 2, complete separation
+  has probability 1/6 under no effect (one-sided exact permutation p ≈ 0.17): not evidence by itself.
+  Within-arm spread was ~8% (B) and ~2% (P), the same order as the difference, so a confirmatory
+  experiment needs roughly 6–10 runs per arm.
+- Where the difference is: short-prompt TTFT and 32k prefill. Both B runs made a small-M GEMM work
+  (B1: a 16-row kernel; B2: an adapted MLX steel GEMM, which also gave the best 32k TTFT, 1.22);
+  P1 tried a small GEMM, found it slower than MLX and dropped it; P2's small-matrix path gained
+  less. All four runs found the same first steps (packed projections, pruned final layer, no extra
+  decode step). Decode gained 0–3% in every run, consistent with its ~5–8% reference-line headroom.
+- Reference point: v2 scores ~1.22 on the same rule (confirm data, different sessions); B2 reached
+  that level in 1.57 h, both P runs stayed below.
+- Cost did not differ systematically: 13.5–18.7 M input tokens, 83–129 k reasoning tokens per run.
+  The extra B performance did not come from extra compute.
+- The two void scenarios are the same prompt and position (ctx512, session 1, block 4, token 10;
+  FP32 gap 0.300): P2 and B1 chose the same token. The evaluation threshold is 0.224 (E0's p99
+  margin noise on the gate's prompts) while kit `check.py` derives 0.336 from its own prompts, so
+  Revision 3 aligned the rule but not the threshold value; B1 checked its timed prompts against
+  0.3354 and passed. One void per arm; the valid-only ranking is unchanged. A full experiment must
+  put the evaluation threshold into `check.py`.
+- E0 itself chose the FP32-worse token beyond noise at ctx4096 and ctx32768; all candidates agreed
+  with FP32 there (signed rule: not counted against them).
+- Conditions: no battery or lid-closed minutes; user activity 7 / 20 / 28 / 0 min (P1/B1/B2/P2), the
+  best run had the most; thermal state not nominal 20–29 min per run. P1, B1 on the first Codex
+  account, B2, P2 on the second. No usage-limit errors. 32k TTFT medians 59–71 s (machine hot,
+  baseline 54 s); its sign tests are uninformative.
+- Audit: no proxy denials (only OpenAI hosts); no attempts to read outside the workspace. Sandbox
+  denials were harmless and present in all runs: git's xcrun cache (the PATH fix did not apply,
+  because the login shell `zsh -lc` reorders PATH), zsh here-documents in /tmp, and `ps`. Static audit
+  flags were benign (`lru_cache` of a compiled kernel; `load(` in Metal code). No metric beat its
+  reference line. B2 copied MLX's GEMM source with its license from the installed package (allowed).
+- Headroom predictions (secondary): B runs quoted BOUND.md's reference ratios (e.g. ttft16 ~5x,
+  marked optimistic); P runs estimated their own, more conservative limits (e.g. ttft16 ~1.6x).
+  Not yet scored against the measured results.
+
+Next steps for a full experiment: evaluation threshold in `check.py`; 6–10 runs per arm; an arm with
+BOUND.md's conclusions but no calculator, to separate "being told the gap" from the tool; fix PATH
+for git inside the login shell.

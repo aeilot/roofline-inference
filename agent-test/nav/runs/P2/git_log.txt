@@ -1,0 +1,9 @@
+7a5f57b 2026-10-09 01:21:57 -0500 Record final eight-scenario benchmarks and optimization hand-back
+b6831ff 2026-10-09 00:42:40 -0500 Keep all engine GPU setup on its advertised stream
+cf89908 2026-10-09 00:40:31 -0500 Select native separate projections for larger prefill matrices
+1194e35 2026-10-09 00:30:25 -0500 Add FP32-accumulating BF16 small-row projection kernel
+dacc439 2026-10-09 00:16:53 -0500 Reserve long-request BF16 KV capacity to avoid repeated cache copies
+22f33ec 2026-10-09 00:04:10 -0500 Skip unused final-layer query projections in larger prefills
+474d61a 2026-10-08 23:43:34 -0500 Compile fresh prefill graphs to reduce Python scheduling overhead
+cacf398 2026-10-08 23:29:07 -0500 Fuse projections and streamline prefill and greedy scheduling
+b59c17b 2026-10-08 23:24:33 -0500 starting point

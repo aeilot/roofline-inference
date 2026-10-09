@@ -1,16 +1,86 @@
 [
  {
-  "run": "T1",
-  "wall_s": 28.039000034332275,
-  "requests": 3,
-  "tool_calls": 2,
-  "tool_time_s": 3.4819998741149902,
-  "model_time_s": 24.557000160217285,
-  "reasoning_summaries": 0,
-  "input_tokens": 44354,
-  "cached_input_tokens": 41088,
-  "output_tokens": 556,
-  "reasoning_output_tokens": 0,
-  "total_tokens": 44910
+  "run": "P1",
+  "machine": {
+   "samples": 88,
+   "minutes_not_on_ac": 0,
+   "minutes_lid_closed": 0,
+   "minutes_thermal_not_nominal": 29,
+   "minutes_user_active": 7
+  },
+  "wall_s": 5258.805999994278,
+  "requests": 167,
+  "tool_calls": 165,
+  "tool_time_s": 2039.0789995193481,
+  "model_time_s": 3219.72700047493,
+  "reasoning_summaries": 212,
+  "input_tokens": 13464191,
+  "cached_input_tokens": 13128704,
+  "output_tokens": 115841,
+  "reasoning_output_tokens": 82638,
+  "total_tokens": 13580032
+ },
+ {
+  "run": "B1",
+  "machine": {
+   "samples": 119,
+   "minutes_not_on_ac": 0,
+   "minutes_lid_closed": 0,
+   "minutes_thermal_not_nominal": 21,
+   "minutes_user_active": 20
+  },
+  "wall_s": 7136.217000007629,
+  "requests": 178,
+  "tool_calls": 174,
+  "tool_time_s": 693.8870010375977,
+  "model_time_s": 6442.329998970032,
+  "reasoning_summaries": 364,
+  "input_tokens": 15169808,
+  "cached_input_tokens": 14802432,
+  "output_tokens": 170321,
+  "reasoning_output_tokens": 129137,
+  "total_tokens": 15340129
+ },
+ {
+  "run": "B2",
+  "machine": {
+   "samples": 95,
+   "minutes_not_on_ac": 0,
+   "minutes_lid_closed": 0,
+   "minutes_thermal_not_nominal": 27,
+   "minutes_user_active": 28
+  },
+  "wall_s": 5649.329999923706,
+  "requests": 175,
+  "tool_calls": 171,
+  "tool_time_s": 572.8450009822845,
+  "model_time_s": 5076.4849989414215,
+  "reasoning_summaries": 252,
+  "input_tokens": 18699980,
+  "cached_input_tokens": 18357760,
+  "output_tokens": 126795,
+  "reasoning_output_tokens": 86962,
+  "total_tokens": 18826775
+ },
+ {
+  "run": "P2",
+  "machine": {
+   "samples": 118,
+   "minutes_not_on_ac": 0,
+   "minutes_lid_closed": 0,
+   "minutes_thermal_not_nominal": 20,
+   "minutes_user_active": 0
+  },
+  "wall_s": 7050.65499997139,
+  "requests": 167,
+  "tool_calls": 158,
+  "tool_time_s": 189.80699944496155,
+  "model_time_s": 6860.848000526428,
+  "reasoning_summaries": 335,
+  "input_tokens": 16788018,
+  "cached_input_tokens": 16476288,
+  "output_tokens": 161922,
+  "reasoning_output_tokens": 126007,
+  "total_tokens": 16949940
  }
 ]

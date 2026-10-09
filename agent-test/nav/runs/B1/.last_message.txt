@@ -1,0 +1,7 @@
+Completed and committed as `62eac4b`. Working tree is clean.
+
+- `tools/check.py`: **PASS**
+- All eight timed requests passed token validation.
+- Final measured overall speedup: **1.256×**, with one pair per scenario.
+
+[NOTES.md](/Users/aeilot/nav-runs/B1/NOTES.md) includes all ratios, kept and dropped changes, performance estimates, and time allocation.

@@ -1,0 +1,5 @@
+Committed as `bef51fc`.
+
+Measured **1.106× overall speedup**. `tools/check.py` and all 28 benchmark-prompt token checks pass.
+
+[NOTES.md](/Users/aeilot/nav-runs/P1/NOTES.md) contains per-scenario ratios, headroom estimates, and retained/dropped experiments.

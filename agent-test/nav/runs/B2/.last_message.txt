@@ -1,0 +1,8 @@
+Implemented and committed as `881d4c7`; working tree is clean.
+
+- Correctness check and additional 32K token audit: **PASS**
+- Measured overall speed-up: **1.160×**
+- Best TTFT speed-up: **1.657×**
+- The 32K timing regressed; documented alongside all results.
+
+Changes, experiments, and estimates are in [NOTES.md](/Users/aeilot/nav-runs/B2/NOTES.md).

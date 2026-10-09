@@ -1,0 +1,7 @@
+62eac4b 2026-10-08 21:19:54 -0500 Record final eight-scenario timings and passing token validation
+71ef170 2026-10-08 21:11:14 -0500 Reserve long KV buffers and restore native QK operations after timed validation
+6acf427 2026-10-08 20:53:13 -0500 Fuse decode QK normalization and rotary encoding with BF16 rounding
+03f6508 2026-10-08 20:14:23 -0500 Compile initial prefill and deliver the first token before decoding
+a9e76dd 2026-10-08 19:53:24 -0500 Use a sixteen-row BF16 GEMM without padded work or staging
+e39731c 2026-10-08 19:25:36 -0500 Combine projections and eliminate unused prefill and decode work
+8cd70f4 2026-10-08 19:21:09 -0500 starting point

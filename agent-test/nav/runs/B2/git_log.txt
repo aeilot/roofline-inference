@@ -1,0 +1,10 @@
+881d4c7 2026-10-08 23:19:19 -0500 Preserve passing 32K token audit and reproducible measurement summary
+c604a4d 2026-10-08 23:10:15 -0500 Record final eight-scenario benchmarks and resource estimates
+d866e15 2026-10-08 22:55:10 -0500 Start prefill GPU execution while encoding subsequent layers
+a480fa1 2026-10-08 22:48:46 -0500 Adopt the first BF16 prefill K/V tensors directly as the prompt cache
+e4318f6 2026-10-08 22:26:40 -0500 Fuse BF16 Q/K normalization, rotary embeddings, and KV layout conversion
+81790d3 2026-10-08 22:18:37 -0500 Use a 16-row BF16 GEMM and deliver the first token before decode lookahead
+4e60f0b 2026-10-08 22:14:42 -0500 Compile repeated projection and MLP graphs with dynamic RoPE offsets
+ca56c0c 2026-10-08 22:02:39 -0500 Combine attention and MLP input projections using BF16 weights
+9a5491f 2026-10-08 21:49:19 -0500 Prune unused final-layer prefill work and process the final prompt chunk together
+212e28d 2026-10-08 21:45:17 -0500 starting point

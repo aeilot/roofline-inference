@@ -1,0 +1,250 @@
+{
+ "random-4096-0-9-151668-151644": {
+  "position": 9,
+  "e0_token": 151668,
+  "other_token": 151644,
+  "fp32_gap": 0.2519798278808594,
+  "e0_minus_other": -0.2519798278808594,
+  "fp32_argmax": 151644
+ },
+ "random-512-0-68-1467-2213": {
+  "position": 68,
+  "e0_token": 1467,
+  "other_token": 2213,
+  "fp32_gap": 0.10952186584472656,
+  "e0_minus_other": -0.10952186584472656,
+  "fp32_argmax": 2213
+ },
+ "random-512-0-89-747-261": {
+  "position": 89,
+  "e0_token": 747,
+  "other_token": 261,
+  "fp32_gap": 0.19787216186523438,
+  "e0_minus_other": 0.19787216186523438,
+  "fp32_argmax": 747
+ },
+ "random-256-0-32-33108-101034": {
+  "position": 32,
+  "e0_token": 33108,
+  "other_token": 101034,
+  "fp32_gap": 0.028652191162109375,
+  "e0_minus_other": -0.028652191162109375,
+  "fp32_argmax": 101034
+ },
+ "random-256-0-79-12857-3837": {
+  "position": 79,
+  "e0_token": 12857,
+  "other_token": 3837,
+  "fp32_gap": 0.05620384216308594,
+  "e0_minus_other": 0.05620384216308594,
+  "fp32_argmax": 17714
+ },
+ "random-256-0-0-144073-128668": {
+  "position": 0,
+  "e0_token": 144073,
+  "other_token": 128668,
+  "fp32_gap": 0.05371665954589844,
+  "e0_minus_other": 0.05371665954589844,
+  "fp32_argmax": 144073
+ },
+ "text-32768-3-60-101035-73345": {
+  "position": 60,
+  "e0_token": 101035,
+  "other_token": 73345,
+  "fp32_gap": 0.09222412109375,
+  "e0_minus_other": -0.09222412109375,
+  "fp32_argmax": 73345
+ },
+ "text-4096-3-29-75636-375": {
+  "position": 29,
+  "e0_token": 75636,
+  "other_token": 375,
+  "fp32_gap": 0.18372154235839844,
+  "e0_minus_other": 0.18372154235839844,
+  "fp32_argmax": 75636
+ },
+ "text-4096-3-39-57218-488": {
+  "position": 39,
+  "e0_token": 57218,
+  "other_token": 488,
+  "fp32_gap": 0.10613346099853516,
+  "e0_minus_other": 0.10613346099853516,
+  "fp32_argmax": 57218
+ },
+ "text-512-3-77-3837-271": {
+  "position": 77,
+  "e0_token": 3837,
+  "other_token": 271,
+  "fp32_gap": 0.03660869598388672,
+  "e0_minus_other": 0.03660869598388672,
+  "fp32_argmax": 3837
+ },
+ "text-512-3-25-8-593": {
+  "position": 25,
+  "e0_token": 8,
+  "other_token": 593,
+  "fp32_gap": 0.03627777099609375,
+  "e0_minus_other": 0.03627777099609375,
+  "fp32_argmax": 8
+ },
+ "text-256-3-16-15340-18088": {
+  "position": 16,
+  "e0_token": 15340,
+  "other_token": 18088,
+  "fp32_gap": 0.04423332214355469,
+  "e0_minus_other": 0.04423332214355469,
+  "fp32_argmax": 15340
+ },
+ "random-512-4-10-151645-198": {
+  "position": 10,
+  "e0_token": 151645,
+  "other_token": 198,
+  "fp32_gap": 0.300262451171875,
+  "e0_minus_other": 0.300262451171875,
+  "fp32_argmax": 151645
+ },
+ "random-512-4-93-108386-14880": {
+  "position": 93,
+  "e0_token": 108386,
+  "other_token": 14880,
+  "fp32_gap": 0.03532218933105469,
+  "e0_minus_other": -0.03532218933105469,
+  "fp32_argmax": 14880
+ },
+ "random-256-4-10-15-16": {
+  "position": 10,
+  "e0_token": 15,
+  "other_token": 16,
+  "fp32_gap": 0.10019683837890625,
+  "e0_minus_other": -0.10019683837890625,
+  "fp32_argmax": 16
+ },
+ "text-512-7-19-18493-102347": {
+  "position": 19,
+  "e0_token": 18493,
+  "other_token": 102347,
+  "fp32_gap": 0.033326148986816406,
+  "e0_minus_other": 0.033326148986816406,
+  "fp32_argmax": 18493
+ },
+ "text-256-7-162-29767-20450": {
+  "position": 162,
+  "e0_token": 29767,
+  "other_token": 20450,
+  "fp32_gap": 0.06890201568603516,
+  "e0_minus_other": 0.06890201568603516,
+  "fp32_argmax": 29767
+ },
+ "text-256-7-62-77288-103124": {
+  "position": 62,
+  "e0_token": 77288,
+  "other_token": 103124,
+  "fp32_gap": 0.04323768615722656,
+  "e0_minus_other": -0.04323768615722656,
+  "fp32_argmax": 103124
+ },
+ "text-32768-1-21-18830-102008": {
+  "position": 21,
+  "e0_token": 18830,
+  "other_token": 102008,
+  "fp32_gap": 0.00220489501953125,
+  "e0_minus_other": -0.00220489501953125,
+  "fp32_argmax": 102008
+ },
+ "text-32768-1-2-107684-101450": {
+  "position": 2,
+  "e0_token": 107684,
+  "other_token": 101450,
+  "fp32_gap": 0.014471054077148438,
+  "e0_minus_other": 0.014471054077148438,
+  "fp32_argmax": 107684
+ },
+ "text-512-1-45-284-198": {
+  "position": 45,
+  "e0_token": 284,
+  "other_token": 198,
+  "fp32_gap": 0.0677947998046875,
+  "e0_minus_other": 0.0677947998046875,
+  "fp32_argmax": 284
+ },
+ "text-256-1-10-15-21": {
+  "position": 10,
+  "e0_token": 15,
+  "other_token": 21,
+  "fp32_gap": 0.07473945617675781,
+  "e0_minus_other": -0.07473945617675781,
+  "fp32_argmax": 21
+ },
+ "text-256-1-149-356-220": {
+  "position": 149,
+  "e0_token": 356,
+  "other_token": 220,
+  "fp32_gap": 0.05911827087402344,
+  "e0_minus_other": 0.05911827087402344,
+  "fp32_argmax": 356
+ },
+ "text-1024-1-1-13874-688": {
+  "position": 1,
+  "e0_token": 13874,
+  "other_token": 688,
+  "fp32_gap": 0.05451393127441406,
+  "e0_minus_other": 0.05451393127441406,
+  "fp32_argmax": 13874
+ },
+ "text-16-1-7-17-15": {
+  "position": 7,
+  "e0_token": 17,
+  "other_token": 15,
+  "fp32_gap": 0.048671722412109375,
+  "e0_minus_other": 0.048671722412109375,
+  "fp32_argmax": 17
+ },
+ "random-512-2-23-280-401": {
+  "position": 23,
+  "e0_token": 280,
+  "other_token": 401,
+  "fp32_gap": 0.025360107421875,
+  "e0_minus_other": -0.025360107421875,
+  "fp32_argmax": 401
+ },
+ "random-512-2-3-9813-220": {
+  "position": 3,
+  "e0_token": 9813,
+  "other_token": 220,
+  "fp32_gap": 0.13403987884521484,
+  "e0_minus_other": 0.13403987884521484,
+  "fp32_argmax": 9813
+ },
+ "text-32768-5-73-46944-101039": {
+  "position": 73,
+  "e0_token": 46944,
+  "other_token": 101039,
+  "fp32_gap": 0.3105316162109375,
+  "e0_minus_other": -0.3105316162109375,
+  "fp32_argmax": 101039
+ },
+ "text-4096-5-23-86119-8997": {
+  "position": 23,
+  "e0_token": 86119,
+  "other_token": 8997,
+  "fp32_gap": 0.005810737609863281,
+  "e0_minus_other": 0.005810737609863281,
+  "fp32_argmax": 86119
+ },
+ "text-4096-5-27-111390-99259": {
+  "position": 27,
+  "e0_token": 111390,
+  "other_token": 99259,
+  "fp32_gap": 0.11832332611083984,
+  "e0_minus_other": 0.11832332611083984,
+  "fp32_argmax": 111390
+ },
+ "text-256-5-49-16-17": {
+  "position": 49,
+  "e0_token": 16,
+  "other_token": 17,
+  "fp32_gap": 0.10273361206054688,
+  "e0_minus_other": -0.10273361206054688,
+  "fp32_argmax": 17
+ }
+}

@@ -1,0 +1,8 @@
+bef51fc 2026-10-08 19:15:44 -0500 Use seven-repeat TTFT confirmation and complete final handback notes
+c0343ed 2026-10-08 19:12:33 -0500 Record passing token validation for every benchmark prompt variant
+7b52309 2026-10-08 19:07:19 -0500 Document final eight-scenario benchmark and optimization experiments
+6d52850 2026-10-08 18:35:57 -0500 Use 4096-token prefill chunks and yield the first token without decode lookahead
+c572111 2026-10-08 18:10:36 -0500 Fuse BF16 query/key normalization with rotary embedding for small batches
+09c3d82 2026-10-08 18:00:44 -0500 Skip unused final-layer prefill outputs and extra last decode
+eed049e 2026-10-08 17:54:36 -0500 Fuse shared-input projections and prefill short prompts in one pass
+b68c8aa 2026-10-08 17:48:22 -0500 starting point

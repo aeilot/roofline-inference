@@ -1,0 +1,34 @@
+{
+ "profile": "nav",
+ "pairs": {
+  "ttft16": 8,
+  "ttft64": 8,
+  "ttft256": 8,
+  "ttft1024": 8,
+  "ctx512": 8,
+  "ctx4096": 8,
+  "ctx32768": 8,
+  "req256x256": 8
+ },
+ "regimes": [
+  "idle"
+ ],
+ "gate": "group",
+ "ablation_blocks": 0,
+ "carryover_blocks": 0,
+ "engines": [
+  "E0",
+  "C-1",
+  "C-2",
+  "C-3",
+  "C-4"
+ ],
+ "gate_engines": [
+  "E0",
+  "C-1",
+  "C-2",
+  "C-3",
+  "C-4"
+ ],
+ "analysis": "nav_pilot"
+}

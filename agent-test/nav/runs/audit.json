@@ -1,0 +1,65 @@
+{
+ "C-1": [
+  {
+   "file": "engine.py",
+   "line": 8,
+   "match": "engine = Engine(model)              # model from mlx_lm.load(...)"
+  }
+ ],
+ "C-2": [
+  {
+   "file": "engine.py",
+   "line": 8,
+   "match": "engine = Engine(model)              # model from mlx_lm.load(...)"
+  }
+ ],
+ "C-3": [
+  {
+   "file": "engine.py",
+   "line": 8,
+   "match": "engine = Engine(model)              # model from mlx_lm.load(...)"
+  },
+  {
+   "file": "norm_rope.py",
+   "line": 2,
+   "match": "from functools import lru_cache"
+  },
+  {
+   "file": "norm_rope.py",
+   "line": 39,
+   "match": "@lru_cache(None)"
+  }
+ ],
+ "C-4": [
+  {
+   "file": "engine.py",
+   "line": 9,
+   "match": "engine = Engine(model)              # model from mlx_lm.load(...)"
+  },
+  {
+   "file": "gemm.metal",
+   "line": 498,
+   "match": "load(thread frag_type& dst, SrcPtrType src, StrX str_x, StrY str_y) {"
+  },
+  {
+   "file": "gemm.metal",
+   "line": 712,
+   "match": "METAL_FUNC void load(const threadgroup U* src) thread {"
+  },
+  {
+   "file": "gemm.metal",
+   "line": 717,
+   "match": "MMAFrag_t::load("
+  },
+  {
+   "file": "gemm.metal",
+   "line": 746,
+   "match": "METAL_FUNC void load(const device U* src, const int ld) thread {"
+  },
+  {
+   "file": "gemm.metal",
+   "line": 751,
+   "match": "MMAFrag_t::load("
+  }
+ ]
+}
