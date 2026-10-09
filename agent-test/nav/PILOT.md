@@ -170,3 +170,38 @@ no excluded units; every candidate passed the FP32 gate in both sessions. Report
 Next steps for a full experiment: evaluation threshold in `check.py`; 6–10 runs per arm; an arm with
 BOUND.md's conclusions but no calculator, to separate "being told the gap" from the tool; fix PATH
 for git inside the login shell.
+
+### Agent process (from rollouts: reasoning summaries, messages, commands)
+
+- Every run opened with the same diagnosis within the first minute (separate last-token pass, unused
+  final-layer work, unfused shared-input projections) and committed it within 5–7 minutes.
+- Both B runs read BOUND.md first and stated from it that decode is near the bandwidth line and
+  prefill has room; both then went to MLX's steel GEMM/attention sources within 5 minutes and
+  built a small-M GEMM (B1 a 16-row kernel at 30 min; B2 an adapted steel GEMM, 4.2 vs 7.2 ms on 28
+  projections, at 20 min). The roofline calculator itself was run once per B run (B1 at 2 min for
+  one request, B2 at 64 min for NOTES.md): the documented conclusions, not the tool, steered them.
+- P1 read HARDWARE.md, tried a small GEMM at 37 min, found it slower than MLX and dropped it, then
+  explored lower-value ideas (residual/norm fusion, bounded output head) and stopped at 88 min.
+  P2 profiled decode itself at 7 min ("weight reads ~12 ms of a ~14 ms step"), reached the same
+  decode conclusion as BOUND.md, and got a 16-row matmul working only at 62 min.
+- Both arms caught numerical problems with the improved check.py: P2 dropped a fused norm/RoPE
+  kernel for exceeding the regret limit; B1 dropped a fused decode kernel after its own timed-prompt
+  audit at 106 min. B2's own 32k bench showed a 9% slowdown that the evaluation did not reproduce
+  (1.22x faster): agents' 32k measurements were dominated by heat.
+
+## Revision 4 (2026-10-09, after the pilot): check.py uses the evaluation's threshold and prompts
+
+- `tools/check.py` now uses NOISE = 0.2241, the evaluation's threshold (E0's p99 margin error on the
+  gate prompts; identical in all six gate runs with this MLX version), for both the regret criterion
+  and the generated-token rule; previously it derived 0.336 from its own prompts.
+- Part 3 now runs the evaluation's own random-token prompts (variants 0/2/4/6 of every scenario up
+  to 4096 tokens, the evaluation's generation lengths) besides the 3000/9000-token prompts;
+  `--full` adds the four 32k prompts and TASK.md asks for it before the final commit. Natural-text
+  prompts stay hidden (they are built from this project's documents). The prompts were verified
+  identical to `agent-test/v3/prompts.py`.
+- Validation on the pilot engines: the new check fails C-1 (P2) and C-2 (B1) at exactly the
+  evaluation's void (ctx512 variant 4, gap +0.3003) and passes C-3, C-4 and the starting engine;
+  ~3.5 min per run.
+- nav_analyze.py warns when a gate's threshold differs from 0.2241 by more than 1%.
+- The login profile of each run's box restores the real-git PATH and sets TMPPREFIX, so `zsh -lc`
+  no longer hits the xcrun cache or /tmp (verified in self-test T3).

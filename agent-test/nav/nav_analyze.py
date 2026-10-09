@@ -153,6 +153,13 @@ def main():
     summary["_plausibility_flags"] = flags
 
     lines += ["## 数据质量", ""]
+    # kit check.py hard-codes the evaluation threshold so agents test against the same number
+    kit_noise = 0.2241
+    for name, g in gates.items():
+        thr = g.get("e0_margin_err_p99")
+        if thr is not None and abs(thr - kit_noise) > 0.01 * kit_noise:
+            lines.append(f"- **警告**：{name} 的噪声阈值 {thr:.4f} 与 kit check.py 的 NOISE {kit_noise} 不一致，"
+                         "agent 自查与评估的标准不同")
     for name, g in gates.items():
         lines.append(f"- {name}: " + ", ".join(f"{e} {'PASS' if v['pass'] else 'FAIL'}" for e, v in g["engines"].items()))
     lines.append("- 排除的计时：" + (", ".join(f"{e} {why} ×{n}" for (e, why), n in sorted(excluded.items())) or "无"))

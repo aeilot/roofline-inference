@@ -1,0 +1,20 @@
+{
+ "arm": "P",
+ "run": "T3",
+ "workspace": "/Users/aeilot/nav-runs/T3",
+ "started": 1791553462.547429,
+ "ended": 1791553472.6183522,
+ "hours": 1.0,
+ "hard_stopped": false,
+ "exit_code": 0,
+ "model": "gpt-6.1-sol",
+ "effort": "medium",
+ "test": true,
+ "machine": {
+  "samples": 1,
+  "minutes_not_on_ac": 0,
+  "minutes_lid_closed": 0,
+  "minutes_thermal_not_nominal": 0,
+  "minutes_user_active": 1
+ }
+}

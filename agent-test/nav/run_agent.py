@@ -111,6 +111,10 @@ def make_box(run: str) -> Path:
     real_git = subprocess.run(["xcrun", "-f", "git"], capture_output=True, text=True).stdout.strip()
     if real_git:
         (box / "bin/git").symlink_to(real_git)
+    # Codex runs commands with `zsh -lc`: /etc/zprofile's path_helper moves /usr/bin back in front,
+    # so the real-git PATH entry must be restored in the login profile (pilot: the fix above had no
+    # effect), and zsh's here-documents use TMPPREFIX (default /tmp/zsh), not TMPDIR.
+    (box / "home/.zprofile").write_text(f'export PATH="{box / "bin"}:$PATH"\nexport TMPPREFIX="{box / "tmp"}/zsh"\n')
     if THERMSTATE.exists():   # thermal-state helper used by tools/platform_state.py (no compiler needed)
         shutil.copy(THERMSTATE, box / "home/.cache/roofline-platform-state/thermstate")
     return box
@@ -170,6 +174,7 @@ def main():
     sb.write_text(profile(ws, box))
     env = {k: v for k, v in os.environ.items() if not k.startswith(("CLAUDE", "ANTHROPIC", "OPENAI"))}
     env.update(HOME=str(box / "home"), CODEX_HOME=str(box / "codex"), TMPDIR=str(box / "tmp") + "/",
+               TMPPREFIX=str(box / "tmp") + "/zsh",
                XDG_CACHE_HOME=str(box / "home/.cache"), XDG_CONFIG_HOME=str(box / "home/.config"),
                HF_HOME=str(HF_HOME), HF_HUB_OFFLINE="1", GIT_CONFIG_NOSYSTEM="1",
                HTTPS_PROXY=f"http://127.0.0.1:{PORT}", HTTP_PROXY=f"http://127.0.0.1:{PORT}",

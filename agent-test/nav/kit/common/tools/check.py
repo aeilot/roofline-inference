@@ -1,23 +1,29 @@
-"""Correctness check for engine/engine.py (the same criteria the final evaluation applies).
+"""Correctness check for engine/engine.py (the same criteria and threshold the final evaluation applies).
+
+NOISE = 0.2241 is the evaluation's BF16 noise threshold: stock mlx-lm's p99 top-2-margin error
+against FP32 on the evaluation gate's prompts (identical in every gate run with this MLX version).
 
 1. API contract: Engine(model).stream, new_cache(capacity), forward(tokens, cache) -> [vocab],
    generate(prompt, max_tokens) yields exactly max_tokens ints.
 2. Numerics vs an FP32 reference (same weights upcast), teacher-forced over the FP32 model's
    own greedy continuation, through the engine's forward path (whole prompt, then one token at a
-   time) and through mlx-lm's path. "noise" = mlx-lm's p99 top-2-margin error. The engine passes if
+   time) and through mlx-lm's path. The engine passes if
      - its median RMS logit error, p99 per-position max error and p99 top-2-margin error are each
        <= 1.1x mlx-lm's,
      - its top-1 disagreements with FP32 are not significantly more frequent (sign test p >= 0.05),
-     - every top-1 disagreement is a near-tie: FP32 rates the engine's pick at most `noise` below
+     - every top-1 disagreement is a near-tie: FP32 rates the engine's pick less than NOISE below
        FP32's own top token.
-3. Long prompts through generate() (chunked prefill, the evaluation's 4k/32k path): the engine's
-   generated tokens are compared with mlx-lm's. At the first position where they differ, FP32
-   must not rate the engine's token lower than mlx-lm's by more than `noise`. The evaluation
-   applies this rule to every timed request (32k included); a scenario that breaks it does not count.
+3. Generated tokens through generate(), compared with mlx-lm's: at the first position where they
+   differ, FP32 must not rate the engine's token lower than mlx-lm's by more than NOISE. The
+   evaluation applies this rule to every timed request; a scenario that breaks it scores as no
+   speed-up. Prompts: two long ones (3000 and 9000 tokens, several prefill chunks) and the
+   evaluation's own random-token prompts for every scenario up to 4096 tokens (4 per scenario,
+   with the evaluation's generation lengths). `--full` adds its four 32768-token prompts (~10 min).
+   The evaluation also uses natural-text prompts that are not available here.
 Summation order may change (that is allowed); this checks the error stays at BF16-noise level.
-The evaluation uses other prompts with the same criteria: a result close to a limit may fail there.
 
-    python tools/check.py            # ~2-5 min; prints PASS or FAIL with the numbers
+    python tools/check.py            # ~4-6 min; prints PASS or FAIL with the numbers
+    python tools/check.py --full     # also the 32k prompts; run it before your final commit
 """
 from __future__ import annotations
 
@@ -34,13 +40,22 @@ from mlx_lm.models.cache import make_prompt_cache
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "engine"))
 from engine import Engine  # noqa: E402
 
+NOISE = 0.2241
 GEN = 64
-LONG = (3000, 9000)     # > 2048: several prefill chunks
-LONG_GEN = 32
 TEXTS = ["Explain the roofline model in two sentences.",
          "用三句话解释为什么 decode 阶段受内存带宽限制。",
          "Write a Python function that merges two sorted lists, with a docstring.",
          "Translate to French: The cache line is 128 bytes and the GPU has ten cores."]
+# (scenario, prompt length, generated tokens); variants 0, 2, 4, 6 are the evaluation's random prompts
+EVAL_SCENARIOS = [("ttft16", 16, 8), ("ttft64", 64, 8), ("ttft256", 256, 8), ("ttft1024", 1024, 8),
+                  ("ctx512", 512, 129), ("ctx4096", 4096, 129), ("req256x256", 256, 256)]
+EVAL_LONG = [("ctx32768", 32768, 129)]
+EVAL_VARIANTS = (0, 2, 4, 6)
+
+
+def eval_prompt(length, variant):
+    """The evaluation's random-token prompt (agent-test/v3/prompts.py, kind "random")."""
+    return mx.random.randint(1000, 150000, (length,), key=mx.random.key(1_000_003 * length + variant)).tolist()
 
 
 def errs(logits, ref):
@@ -68,6 +83,7 @@ def fp32_last_logits(model32, seq):
 
 
 def main():
+    full = "--full" in sys.argv[1:]
     model, tok = load("Qwen/Qwen3-0.6B")
     model32, _ = load("Qwen/Qwen3-0.6B")
     model32.set_dtype(mx.float32)
@@ -90,20 +106,19 @@ def main():
     for prompt in prompts:
         L = len(prompt)
         cont = [t for t, _ in generate_step(mx.array(prompt), model32, max_tokens=GEN)]
-        full = mx.array(prompt + cont)[None]
-        ref = model32(full, cache=make_prompt_cache(model32))[0, L - 1:L - 1 + GEN].astype(mx.float32)
+        full_seq = mx.array(prompt + cont)[None]
+        ref = model32(full_seq, cache=make_prompt_cache(model32))[0, L - 1:L - 1 + GEN].astype(mx.float32)
         # mlx-lm path
         cb = make_prompt_cache(model)
         if L > 1:
-            mx.eval(model(full[:, :L - 1], cache=cb))
+            mx.eval(model(full_seq[:, :L - 1], cache=cb))
         for j in range(GEN):
-            B.append(errs(model(full[:, L - 1 + j:L + j], cache=cb)[0, -1], ref[j]))
+            B.append(errs(model(full_seq[:, L - 1 + j:L + j], cache=cb)[0, -1], ref[j]))
         # engine path
         ce = eng.new_cache(L + GEN + 1)
-        E.append(errs(eng.forward(full[:, :L], ce), ref[0]))
+        E.append(errs(eng.forward(full_seq[:, :L], ce), ref[0]))
         for j in range(1, GEN):
-            E.append(errs(eng.forward(full[:, L - 1 + j:L + j], ce), ref[j]))
-    noise = p99([x["margin"] for x in B])
+            E.append(errs(eng.forward(full_seq[:, L - 1 + j:L + j], ce), ref[j]))
     only_e = sum((not e["top1"]) and b["top1"] for e, b in zip(E, B))
     only_b = sum((not b["top1"]) and e["top1"] for e, b in zip(E, B))
     n = only_e + only_b
@@ -112,31 +127,38 @@ def main():
     rows = [("median RMS", statistics.median(x["rms"] for x in E), statistics.median(x["rms"] for x in B)),
             ("p99 max", p99([x["max"] for x in E]), p99([x["max"] for x in B])),
             ("p99 top-2 margin", p99([x["margin"] for x in E]), p99([x["margin"] for x in B]))]
-    ok = all(e <= 1.1 * b for _, e, b in rows) and p_worse >= 0.05 and worst < noise
+    ok = all(e <= 1.1 * b for _, e, b in rows) and p_worse >= 0.05 and worst < NOISE
     for name, e, b in rows:
         print(f"{name:18s} engine {e:.4f}  mlx-lm {b:.4f}  ratio {e / b:.3f}")
     print(f"top-1 disagreements only-engine {only_e}, only-mlx-lm {only_b}, sign-test p(engine worse) {p_worse:.3f}")
-    print(f"largest FP32 regret of an engine pick {worst:.4f} (must be < noise {noise:.4f})")
+    print(f"largest FP32 regret of an engine pick {worst:.4f} (must be < NOISE {NOISE})")
     print(f"positions {len(E)}")
 
-    # 3. long prompts through generate()
-    for L in LONG:
-        prompt = mx.random.randint(1000, 150000, (L,), key=mx.random.key(50 + L)).tolist()
-        ref_toks = [t for t, _ in generate_step(mx.array(prompt), model, max_tokens=LONG_GEN)]
-        got = list(eng.generate(prompt, LONG_GEN))
-        j = next((i for i, (x, y) in enumerate(zip(ref_toks, got)) if x != y), None)
-        if len(got) != LONG_GEN:
+    # 3. generated tokens vs mlx-lm (first-difference FP32 rule)
+    cases = [(f"long{L}", mx.random.randint(1000, 150000, (L,), key=mx.random.key(50 + L)).tolist(), 32)
+             for L in (3000, 9000)]
+    cases += [(f"{sid} v{v}", eval_prompt(L, v), g) for sid, L, g in EVAL_SCENARIOS + (EVAL_LONG if full else [])
+              for v in EVAL_VARIANTS]
+    exact = 0
+    for name, prompt, g in cases:
+        ref_toks = [t for t, _ in generate_step(mx.array(prompt), model, max_tokens=g)]
+        got = list(eng.generate(prompt, g))
+        if len(got) != g:
             ok = False
-            print(f"long prompt {L}: generate yielded {len(got)} tokens, expected {LONG_GEN}")
-        elif j is None:
-            print(f"long prompt {L}: generate matches mlx-lm on all {LONG_GEN} tokens")
-        else:
-            lg32 = fp32_last_logits(model32, prompt + ref_toks[:j])
-            gap = (lg32[ref_toks[j]] - lg32[got[j]]).item()
-            good = gap <= noise
-            ok &= good
-            print(f"long prompt {L}: first difference at token {j}; FP32 rates the engine's token {gap:+.4f} "
-                  f"below mlx-lm's ({'near-tie, ok' if good else 'beyond noise: FAIL'})")
+            print(f"{name}: generate yielded {len(got)} tokens, expected {g}: FAIL")
+            continue
+        j = next((i for i, (x, y) in enumerate(zip(ref_toks, got)) if x != y), None)
+        if j is None:
+            exact += 1
+            continue
+        lg32 = fp32_last_logits(model32, prompt + ref_toks[:j])
+        gap = (lg32[ref_toks[j]] - lg32[got[j]]).item()
+        good = gap <= NOISE
+        ok &= good
+        print(f"{name}: first difference at token {j}; FP32 rates the engine's token {gap:+.4f} below "
+              f"mlx-lm's ({'within NOISE, ok' if good else 'beyond NOISE: FAIL'})")
+    print(f"generated-token check: {exact} of {len(cases)} requests identical to mlx-lm"
+          + ("" if full else " (32k prompts not included; use --full)"))
     print("PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)
 

@@ -20,9 +20,10 @@ decode for the three contexts; whole request for 256+256); overall, the geometri
   layout, summation order, removing work whose result is never used. No quantization, no lower
   precision, no speculative decoding, no approximate or sparse attention, no caching across requests.
 - `python tools/check.py` must print PASS for the engine you hand back (numerical error must stay at
-  mlx-lm's BF16 noise level). The evaluation applies the same criteria with other prompts, and also
-  checks every timed request's generated tokens (up to 32768-token prompts) against mlx-lm's with the
-  rule in check.py part 3; a scenario that breaks it counts as no speed-up.
+  mlx-lm's BF16 noise level), and `python tools/check.py --full` before your final commit. It uses the
+  evaluation's own threshold and its random-token timed prompts; the evaluation additionally checks
+  natural-text prompts with the same rule. A scenario whose generated tokens break the rule in
+  check.py part 3 counts as no speed-up.
 - Keep the API in `engine/engine.py`'s docstring unchanged; the evaluation calls exactly that API.
 - Everything the engine needs must live in `engine/` (Python modules, kernel sources, tables) and be
   committed: the evaluation copies only `engine/` from your last commit and imports `engine/engine.py`.
@@ -46,7 +47,7 @@ of your last git commit before the stop is what gets evaluated.
 
 ## Tools
 
-- `tools/check.py` — API + numerical check, including long prompts (~2-5 min). PASS required.
+- `tools/check.py` — API + numerical check incl. the evaluation's timed prompts (~4-6 min; `--full` adds 32k, ~10 min more). PASS required.
 - `tools/bench.py --scenarios ... --repeats N` — process-isolated timing vs mlx-lm, thermally gated.
   Prints mlx-lm / engine ratios (> 1 = faster).
 - `tools/profile_ops.py` — where time goes inside prefill and decode, vs matmuls and attention alone.
