@@ -1,0 +1,303 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\W}{\mathcal{W}}
+\newcommand{\Pdead}{\Pi_{\mathrm{dead}}}
+\newcommand{\Tdec}{T_{\mathrm{dec}}}
+\newcommand{\Tpre}{T_{\mathrm{pre}}}
+
+\title{A Resource Lower Bound for Single-Stream LLM Inference:\\
+the Level-A Reference Line}
+\author{Louis Chenluo Deng\\
+\texttt{cdeng44@wisc.edu}}
+\date{2026-10-09}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We derive a conditional resource lower bound for single-stream LLM inference and evaluate it for
+Qwen3-0.6B on an M4 GPU. Measured device rates give calibrated reference lines, not certified hardware
+limits. We retain the exploratory I/O formulas and distinguish them from proved conditional results.
+\end{abstract}
+
+\section{Goal}
+Profiling shows where an inference engine spends time; a resource reference estimates how much work
+is necessary. Following roofline~\cite{roofline}, we use the binding resource and remaining slack to
+guide optimization. Scope: Qwen3-0.6B, BF16 weights and KV, M4 GPU, batch 1, decode and prefill.
+Engine comparisons and navigation experiments are reported separately in \texttt{docs/report.md}.
+
+\section{Setting}\label{sec:setting}
+\subsection{Model}
+Qwen3-0.6B is a dense decoder-only transformer with GQA, SwiGLU and tied embeddings.
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Symbol & Meaning & Value \\
+\midrule
+$\ell$ & layers & 28 \\
+$D,\ D_f$ & hidden / FFN size & 1024 / 3072 \\
+$H,\ H_{kv},\ d$ & query heads / KV heads / head dimension & 16 / 8 / 128 \\
+$V$ & vocabulary & 151\,936 \\
+$\beta,\ \tau$ & BF16 element / int32 token bytes & 2 / 4 \\
+$\Pi$ & matmul weights per layer & 15\,728\,640 \\
+$\nu$ & norm weights per layer (including q/k-norm) & 2304 \\
+$\W$ & total weight bytes (tied embedding counted once) & 1\,192\,099\,840 \\
+$\kappa$ & KV bytes per token, all layers & 114\,688 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{samepage}
+\subsection{Device}
+MacBook Air M4, 10-core GPU, 24 GB unified memory; only the GPU is modelled.
+Rates are microbenchmark calibrations. The spec is \texttt{configs/hardware/m4\_mba\_24g.yaml}.
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Symbol & Resource & Value \\
+\midrule
+$P$ & FMA throughput & $3.68\times10^{12}$ FLOP/s \\
+$B$ & DRAM bandwidth & $102.7\times10^{9}$ B/s \\
+$X$ & exp throughput & $4.6\times10^{11}$ exp/s \\
+$S$ & modelled fast-memory capacity & $12\ \text{MiB}+10\times512\ \text{KiB}=17\ \text{MiB}$ \\
+$P/B$ & machine balance & $35.8$ FLOP/B \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\end{samepage}
+
+\subsection{Workloads}
+\begin{description}[nosep,leftmargin=1.5em]
+\item[Decode $(n)$.] Read one input token and $n$ cached positions; attend to $n+1$ keys,
+append the input token's KV and sample the next token.
+\item[Prefill $(L\ge1)$.] Read $L$ prompt tokens; output their full KV and the first generated token.
+\item[Request $(L,N\ge1)$.] Prefill produces token 1; $N-1$ decode steps produce the rest.
+\end{description}
+All logits are computed, but on-device sampling makes them intermediates: outputs are token ids and
+new KV. A full-logits contract adds $V\beta$ bytes per sampled position. Zero-output requests are outside this scope.
+
+\section{Level A: admissible implementations}\label{sec:levelA}
+\begin{definition}[Level A]
+Fix the reference product DAG. An admissible implementation equals its outputs in exact arithmetic
+and computes every useful contraction product at least once, with BF16 weights and KV. Summation
+order, fusion, tiling, recomputation and softmax formulation are free.
+\end{definition}
+For prefill, only the last row of the final layer needs Q, attention, O and MLP; all rows retain their
+KV projections. Floating-point differences are checked separately against an FP32 reference.
+
+\section{The bound}\label{sec:bound}
+\subsection{Assumptions}
+\begin{description}[nosep,leftmargin=1.5em]
+\item[(R) Rates.] $P,B,X$ are instantaneous rate ceilings. This is \emph{not certified} for the measured
+values above; results are labelled calibrated resource references.
+\item[(C) Capacity.] At most $S$ bytes of inputs initially reside on the fast side of DRAM.
+$S$ is an upper estimate; overestimating it weakens the bound.
+\item[(K) KV.] Cached and output KV are explicit BF16 tensors in DRAM.
+\item[(E) Softmax.] Each computed attention score requires one exp.
+\item[(T) Tokens.] Input ids are read from, and sampled ids written to, DRAM.
+\end{description}
+
+\subsection{Statement}
+Let $F$ count useful-product FLOPs (FMA $=2$), $E$ count attention scores, $Q_0$ count compulsory
+cold-start DRAM bytes, and $R\le Q_0$ count eligible resident inputs (weights, cached KV and prompt
+ids, excluding a decode step's own input token and all output writes).
+\begin{proposition}[Resource bound]\label{prop:main}
+Under (R)--(T), every level-A implementation of workload $w$ satisfies
+\begin{equation}\label{eq:main}
+T(w)\ge T_A(w):=\max\left(\frac{F(w)}{P},\frac{Q_0(w)-\min(S,R(w))}{B},\frac{E(w)}{X}\right).
+\end{equation}
+\end{proposition}
+\begin{proof}
+Every useful product and required exp must be computed. All weights and cached KV must reach fast
+memory, and new KV and sampled ids must reach DRAM. Initial residency saves at most $\min(S,R)$ bytes.
+Each resource therefore needs at least its required work divided by its rate; take the maximum.
+\end{proof}
+The default warm-start credit is $S=17$ MiB, applied once globally (about $0.17$ ms at $B$).
+The bound need not be attainable; dispatch and synchronization belong to per-plan costs.
+
+\section{Closed forms for Qwen3-0.6B}\label{sec:closed}
+\subsection{Decode, context \texorpdfstring{$n$}{n}}
+\begin{gather}
+F_{\mathrm{dec}}(n)=2\ell\Pi+4\ell Hd(n+1)+2VD,\qquad E_{\mathrm{dec}}(n)=\ell H(n+1),\\
+Q_0=\W+2\tau+(n+1)\kappa,\qquad R=\W+\tau+n\kappa.
+\end{gather}
+Since $\W>S$ and intensity is about 1--2 FLOP/B, DRAM binds at every context:
+\begin{equation}
+\boxed{\Tdec(n)=\frac{\W+2\tau-S}{B}+\frac{\kappa}{B}(n+1)
+\approx11.4340\ \text{ms}+1.1167\ \mu\text{s}\,(n+1).}
+\end{equation}
+\begin{center}
+\begin{tabular}{rrrr}
+\toprule
+$n$ & $\Tdec$ & compute time & compute slack \\
+\midrule
+512 & 12.01 ms & 0.36 ms & $34\times$ \\
+4096 & 16.01 ms & 0.58 ms & $28\times$ \\
+32768 & 48.03 ms & 2.37 ms & $20\times$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+At $n=32768$, KV accounts for about 76\% of compulsory DRAM traffic.
+
+\subsection{Prefill, prompt \texorpdfstring{$L$}{L}}
+Let $\Pdead=2DHd+3DD_f=13\,631\,488$ count final-layer Q, O and MLP weights.
+\begin{align}
+F_{\mathrm{pre}}(L)&=2\ell\Pi L-2\Pdead(L-1)
++4dH\left[(\ell-1)\frac{L(L+1)}{2}+L\right]+2VD,\\
+E_{\mathrm{pre}}(L)&=H\left[(\ell-1)\frac{L(L+1)}{2}+L\right],\qquad
+Q_0-S=\W+\tau(L+1)+L\kappa-S.
+\end{align}
+DRAM binds for $L\le48$, compute for $L\ge49$. Attention's quadratic FLOP term exceeds the
+linear term near $L=7.7$k and contributes 81\% at 32k.
+\begin{center}
+\begin{tabular}{rrl}
+\toprule
+$L$ & $\Tpre$ & binding resource \\
+\midrule
+16 & 11.45 ms & DRAM \\
+64 & 15.06 ms & compute \\
+256 & 61.4 ms & compute \\
+1024 & 269 ms & compute \\
+4096 & 1.454 s & compute \\
+32768 & 39.87 s & compute \\
+\bottomrule
+\end{tabular}
+\end{center}
+Exp does not bind: $(E/X)/(F_{\mathrm{attn}}/P)=P/(4dX)=1/64$.
+
+\subsection{Requests}
+For strictly sequential, non-overlapping phases,
+\begin{align}
+T_A(L,N)&=\Tpre(L)+\sum_{i=1}^{N-1}\Tdec(L+i-1)\\
+&=\Tpre(L)+(N-1)\left[\frac{\W+2\tau-S}{B}+\frac{\kappa}{B}\left(L+\frac{N}{2}\right)\right].
+\end{align}
+Token dependencies alone do not justify this sum: cross-phase prefetching may overlap work.
+General request schedules require separate resource and dependency accounting.
+
+\section{Interpretation for navigation}\label{sec:nav}
+\begin{itemize}[nosep]
+\item \textbf{Bottleneck and slack:} $\sigma_r=T_A/(u_r/\rho_r)$ identifies resources with spare capacity.
+\item \textbf{Gap:} $g=T_{\mathrm{measured}}/T_A$ estimates headroom conditional on the rate ceilings.
+\item \textbf{Sensitivity:} for the binding resource, $\partial T_A/\partial\rho_r=-T_A/\rho_r$;
+otherwise it is zero away from ties. Using datasheet bandwidth (120 GB/s) lowers decode references by 14.4\%.
+\end{itemize}
+Closeness to a calibrated line does not establish optimality.
+
+\section{Toward dependency-aware I/O bounds}\label{sec:io}
+Finite fast memory may force transfers beyond compulsory traffic. We retain the single-operator
+results and exploratory extensions below; none changes the final reference or binding resource in
+the evaluated M4 workloads. A tighter whole-graph bound remains open.
+Here $M$ is fast memory in elements and $e=\beta$ bytes per element.
+
+\subsection{Matrix multiplication}
+\begin{lemma}[Smith et al.~\cite{smith}, Cor.~3.8]\label{lem:gemm}
+Classical $C_{m\times n}=A_{m\times k}W_{k\times n}$ with fast memory $M$ and no recomputation reads at least
+\begin{equation}
+\frac{2mnk}{\sqrt{M}}-mn-2M\quad\text{elements.}
+\end{equation}
+The leading constant is tight.
+\end{lemma}
+\paragraph{Exploratory multicore extension.}
+With $P$ cores and private capacity $M_c$, the calculator uses
+\begin{equation}
+\widehat Q_{\mathrm{GEMM}}=\max\left(0,\frac{2mnk}{\sqrt{M_c}}-3PM_c\right)\quad\text{elements.}
+\end{equation}
+This assumes partitioned classical products, no recomputation and per-core transfer accounting.
+Cross-core reductions and charges remain unproved (design notes \S6.8); it is not a general level-A bound.
+\paragraph{Intensity cap.}
+For large GEMMs, $2mnk/(e\cdot2mnk/\sqrt{M})=\sqrt{M}/e\approx1250$ FLOP/B at 12 MiB
+of BF16 storage, about $35\times$ the machine balance.
+
+\subsection{Attention, with explicit constants}
+\paragraph{Exploratory refinement.}\label{est:attn}
+For $E$ score entries, dimension $d$ and Q/K initially in slow memory, the calculator uses
+\begin{equation}
+\widehat Q_{\mathrm{attn}}=\max\left(0,\frac{Ed^2}{M+4d^2}-M\right)\quad\text{elements.}
+\end{equation}
+Inspired by Saha and Ye~\cite{sahaye}, its explicit constants are a local, unproved derivation
+(design notes \S6.6).
+\paragraph{Proposed extensions.}
+Count distinct score pairs for rectangular attention ($E=nL$), causal masks, GQA (stack $g$ query
+heads sharing KV, $n=gN$), and multiple heads/layers. Some core computes at least $E/P$ scores;
+applying the candidate to that core still requires multicore accounting.
+\paragraph{Intensity scale and limitation.}
+With $F=4Ed$, the leading term gives $4(M+4d^2)/(de)\approx99000$ FLOP/B at 12 MiB,
+and 1280 FLOP/B at 32 KiB ($M=d^2$). In the whole graph, Q/K can be produced or recomputed on chip;
+the slow-memory-input assumption therefore restricts this candidate to the operator-boundary estimate.
+
+\subsection{Composing operators}\label{sec:compose}
+The calculator's \texttt{--bound operator} and \texttt{--bound hierarchy} estimates sum operator terms.
+At boundary $b$, let $P$ count fast-memory instances and $S$ be bytes per instance
+(all storage inside the boundary~\cite{savage}): $P=10,S=512$ KiB at the core boundary;
+$P=1,S=17$ MiB at DRAM.
+\begin{equation}\label{eq:operator}
+\widehat Q_b=\max\left(Q_0-PS,\ \sum_o\max(\mathrm{pebble}_o,\mathrm{comp}_o)+Q_{\mathrm{other}}-PS\right).
+\end{equation}
+Here $o$ covers GEMMs (shared-input projections merged) and attentions; $\mathrm{pebble}_o$ is the
+candidate in bytes; $\mathrm{comp}_o$ is cold operator traffic, including activation inputs/outputs
+beyond the $PS$ that may remain on chip; and $Q_{\mathrm{other}}$ covers inputs used by neither.
+Elementwise operations are treated as fused, with their costs omitted. The global warm-start credit
+is applied once, not once per operator.
+\begin{equation}\label{eq:hier}
+\widehat T=\max\left(\frac{F}{P_{\mathrm{peak}}},\max_b\frac{\widehat Q_b}{B_b},\frac{E}{X}\right).
+\end{equation}
+$P_{\mathrm{peak}}$ denotes FMA throughput ($P$ in Section~\ref{sec:bound}); $B_b$ is boundary bandwidth.
+With only compulsory DRAM traffic $Q_0-\min(S,R)$, this reduces to~\eqref{eq:main}.
+
+\paragraph{Status and limitations.}
+$\widehat Q_b$ and $\widehat T$ are exploratory estimates, not proved level-A bounds:
+\begin{itemize}[nosep]
+\item Fusion can remove operator-boundary transfers; upstream recomputation invalidates local slow-memory-input assumptions.
+\item Shared outputs may be charged twice; per-operator residency allowances and the global credit may double-credit bytes.
+Summation requires independently charged traffic and consistent residency/sharing accounting, not established here.
+\item At prefill $L=4096$, estimated traffic is $8.07\times$ compulsory traffic at the core boundary and
+$1.91\times$ at DRAM, yet $\widehat T=T_A$ after taking the resource maximum. Equal times do not imply equal traffic.
+\end{itemize}
+
+\subsection{Open problem: whole-graph bounds}\label{sec:notproved}\label{sec:wholegraph}
+A whole-graph I/O bound must handle dependencies, arbitrary fusion and recomputation.
+Hong--Kung partitioning~\cite{hongkung} is a starting point, subject to the chosen graph and
+recomputation model. A feasible fused schedule would supply an upper bound on minimum traffic and
+help assess tightness; no schedule attaining $T_A$ is currently established.
+
+\section{Future work}\label{sec:future}
+\begin{itemize}[nosep]
+\item \textbf{Navigation value.} Test whether resource guidance improves agent optimization over profiling alone.
+\item \textbf{Whole-graph I/O.} Establish dependency-aware lower bounds and feasible schedules.
+\item \textbf{Extensions.} Study equivalent KV representations, quality-constrained approximation~\cite{harisonak},
+MoE, batching, other devices and separate reference lines for speculative or multi-token decoding.
+\end{itemize}
+
+\begin{thebibliography}{9}
+\bibitem{roofline} S.~Williams, A.~Waterman, D.~Patterson. Roofline: an insightful visual performance
+  model for multicore architectures. \emph{Communications of the ACM}, 52(4), 2009.
+\bibitem{hongkung} J.-W.~Hong, H.~T.~Kung. I/O complexity: the red-blue pebble game. In \emph{Proc.\ STOC},
+  1981.
+\bibitem{savage} J.~E.~Savage. Extending the Hong--Kung model to memory hierarchies. In \emph{Proc.\
+  COCOON}, 1995.
+\bibitem{smith} T.~M.~Smith, B.~Lowery, J.~Langou, R.~A.~van de Geijn. A tight I/O lower bound for
+  matrix multiplication. arXiv:1702.02017, 2019.
+\bibitem{sahaye} B.~Saha, C.~Ye. The I/O complexity of attention, or how optimal is FlashAttention?
+  In \emph{Proc.\ ICML}, 2024. arXiv:2402.07443.
+\bibitem{harisonak} T.~Haris, K.~Onak. Compression barriers for autoregressive transformers.
+  arXiv:2502.15955, 2025.
+\end{thebibliography}
+
+\end{document}
